@@ -1,8 +1,5 @@
 //// Khởi tạo Supabase client (CDN đã load sẵn qua script tag)
-const db = supabase.createClient(
-  'https://gojpmogjretoxplydjvg.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvanBtb2dqcmV0b3hwbHlkanZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0Nzg4ODEsImV4cCI6MjA5MzA1NDg4MX0.iLCNd2VRMiZoFp6_KclZlFsOenUNoM041tl1fobHKDA'
-);
+const db = DH_CFG.createDb();
 
 // ── Toast thông báo ──────────────────────────────────────────────
 let _toastTimer = null;
@@ -278,7 +275,13 @@ function showConfirm(message, onOk, { title='Xác nhận xóa', icon='🗑', okT
 }
 
 // Auth guard
-const _role = sessionStorage.getItem('dh_role');
+const _role = sessionStorage.getItem('dh_role') || localStorage.getItem('dh_role');
+// Nếu chỉ có trong localStorage thì sync lại vào sessionStorage để các hàm khác dùng
+if(_role && !sessionStorage.getItem('dh_role')){
+  sessionStorage.setItem('dh_role', _role);
+  sessionStorage.setItem('dh_user', localStorage.getItem('dh_user')||'');
+  sessionStorage.setItem('dh_name', localStorage.getItem('dh_name')||'');
+}
 if (_role !== 'teacher' && _role !== 'assistant') location.href = 'login.html';
 const isTeacher = _role === 'teacher';
 
@@ -328,7 +331,7 @@ if (!isTeacher) {
   ].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
 }
 
-document.getElementById('logoutBtn').addEventListener('click', e => { e.preventDefault(); sessionStorage.clear(); location.href='login.html'; });
+document.getElementById('logoutBtn').addEventListener('click', e => { e.preventDefault(); sessionStorage.clear(); localStorage.removeItem('dh_user'); localStorage.removeItem('dh_role'); localStorage.removeItem('dh_name'); location.href='login.html'; });
 document.getElementById('menuToggle').addEventListener('click', () => {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('sidebarBackdrop').classList.toggle('show');
@@ -390,7 +393,10 @@ function showPage(name) {
   if (name === 'classes')        renderClasses();
   if (name === 'schedule')       { populateClassFilters(); renderSchedule(); }
   if (name === 'files')          initFileManager();
+  if (name === 'library')        renderLibraryAdmin();
+  if (name === 'groups')         renderZaloGroupsAdmin();
   if (name === 'guide')          adminRenderGuide();
+  if (name === 'feedback-admin')   { populateFbAdminFilters(); loadFbAdminSessions(); }
 }
 document.querySelectorAll('.slink[data-page]').forEach(l => {
   l.addEventListener('click', e => { e.preventDefault(); showPage(l.dataset.page); document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarBackdrop').classList.remove('show'); });
@@ -443,7 +449,7 @@ async function populateClassFilters() {
     const cur = el.value; el.innerHTML = filterOpts; el.value = cur;
   });
   const lcs = document.getElementById('lClassSelect'); if (lcs) { const cur=lcs.value; lcs.innerHTML=modalOpts; lcs.value=cur; }
-  ['addClass','esClass','groupClassSelect','scheduleClass','schedSlotClass'].forEach(id => {
+  ['addClass','esClass','groupClassSelect','scheduleClass','schedSlotClass','zgClass'].forEach(id => {
     const el = document.getElementById(id); if (!el) return;
     const cur = el.value; el.innerHTML = modalOpts; el.value = cur;
   });
@@ -686,7 +692,7 @@ function renderGroupClassTags(selectedClasses) {
   if (!container) return;
   container.innerHTML = '';
   if (!selectedClasses.length) {
-    container.innerHTML = '<span style="color:var(--muted);font-size:.8rem">Tất cả lớp (không giới hạn)</span>';
+    container.innerHTML = '<span style="color:#b45309;font-size:.8rem">Chưa chọn lớp — học sinh sẽ không thấy nhóm này</span>';
     return;
   }
   selectedClasses.forEach(cls => {
@@ -920,7 +926,7 @@ function animateCount(el, target, duration = 1000) {
 
 async function renderOverview() {
   const [{ count: sc }, { count: alertCount }, { data: recentLessons }, { data: recentAlerts }, { count: vidCount }, { count: docCount }] = await Promise.all([
-    db.from('students').select('*', { count:'exact', head:true }),
+    db.from('students').select('*', { count:'exact', head:true }).eq('active', true),
     db.from('alerts').select('*', { count:'exact', head:true }).gte('created_at', new Date().toISOString().split('T')[0]),
     db.from('lessons').select('id,name,class_name').order('created_at', { ascending:false }).limit(4),
     db.from('alerts').select('*').order('created_at', { ascending:false }).limit(4),
@@ -931,7 +937,7 @@ async function renderOverview() {
   // Nếu count trả về null → fetch lại thủ công
   let realSc = sc, realVid = vidCount, realDoc = docCount;
   if (realSc === null || realSc === undefined) {
-    const { data: sd } = await db.from('students').select('id');
+    const { data: sd } = await db.from('students').select('id').eq('active', true);
     realSc = (sd||[]).length;
   }
   if (realVid === null || realVid === undefined) {
@@ -979,6 +985,9 @@ async function renderOverview() {
     }
   });
   document.getElementById('classExpiryNotices').innerHTML = notices.join('');
+
+  refreshLibBadge().catch(() => {});
+  refreshZgBadge().catch(() => {});
 
   // Render online students
   renderOnlineStudents();
@@ -2206,6 +2215,8 @@ function closeViewer() { document.getElementById('viewerModal').classList.remove
 // LESSONS
 // ============================================================
 let currentLessonId=null, pendingLessonVideoFile=null, pendingLessonDocFile=null;
+let editingLessonVideoId=null, editingLessonVideo=null;
+let editingLessonDocId=null, editingLessonDoc=null;
 let _renderLessonsTimer = null;
 
 // ── Lưu / khôi phục trạng thái danh sách bài học ──
@@ -2402,6 +2413,10 @@ function openLessonModal(l=null) {
     document.getElementById('lInlineVideoTitle') && (document.getElementById('lInlineVideoTitle').value = '');
     document.getElementById('lInlineDocLinks').value = '';
     document.getElementById('lInlineHwLinks').value = '';
+    const ivDl = document.getElementById('lInlineVideoAllowDl');
+    if (ivDl) ivDl.checked = false;
+    const idDl = document.getElementById('lInlineDocAllowDl');
+    if (idDl) idDl.checked = true;
   }
   // Fill allowed_usernames
   _lSelectedUsernames = [];
@@ -2547,7 +2562,7 @@ document.getElementById('lSaveBtn').addEventListener('click', async () => {
           const t = inlineTitle
             ? (videoLinks.length > 1 ? `${inlineTitle} (${i+1})` : inlineTitle)
             : `Video bài học${videoLinks.length > 1 ? ' ' + (i+1) : ''}`;
-          await db.from('lesson_videos').insert({ lesson_id: lessonId, title: t, video_url: await encryptUrl(url), storage_path: null, file_name: null });
+          await db.from('lesson_videos').insert({ lesson_id: lessonId, title: t, video_url: await encryptUrl(url), storage_path: null, file_name: null, allow_download: !!document.getElementById('lInlineVideoAllowDl')?.checked });
         }
       }
       // Lưu tài liệu links inline
@@ -2559,7 +2574,7 @@ document.getElementById('lSaveBtn').addEventListener('click', async () => {
           const gdMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
           const docUrl = gdMatch ? `https://drive.google.com/file/d/${gdMatch[1]}/preview` : url;
           const t = docLinks.length > 1 ? `Tài liệu ${i+1}` : 'Tài liệu';
-          await db.from('lesson_docs').insert({ lesson_id: lessonId, title: t, file_name: null, file_type: 'link', storage_path: null, doc_url: await encryptUrl(docUrl) });
+          await db.from('lesson_docs').insert({ lesson_id: lessonId, title: t, file_name: null, file_type: 'link', storage_path: null, doc_url: await encryptUrl(docUrl), allow_download: document.getElementById('lInlineDocAllowDl')?.checked !== false });
         }
       }
       // Lưu bản viết tay links inline
@@ -2571,7 +2586,7 @@ document.getElementById('lSaveBtn').addEventListener('click', async () => {
           const gdMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
           const docUrl = gdMatch ? `https://drive.google.com/file/d/${gdMatch[1]}/preview` : url;
           const t = hwLinks.length > 1 ? `Bản viết tay ${i+1}` : 'Bản viết tay';
-          await db.from('lesson_docs').insert({ lesson_id: lessonId, title: t, file_name: null, file_type: 'handwritten', storage_path: null, doc_url: await encryptUrl(docUrl) });
+          await db.from('lesson_docs').insert({ lesson_id: lessonId, title: t, file_name: null, file_type: 'handwritten', storage_path: null, doc_url: await encryptUrl(docUrl), allow_download: document.getElementById('lInlineDocAllowDl')?.checked !== false });
         }
       }
     }
@@ -2612,6 +2627,115 @@ document.getElementById('backToLessonsBtn').addEventListener('click', async () =
   await _restoreAdminLessonState();
 });
 
+function mediaAllowDownload(item, kind) {
+  if (!item) return false;
+  if (item.allow_download === true) return true;
+  if (item.allow_download === false) return false;
+  return kind === 'doc';
+}
+
+async function toggleMediaDownload(kind, id, next, lessonId) {
+  const table = kind === 'video' ? 'lesson_videos' : 'lesson_docs';
+  const { error } = await db.from(table).update({ allow_download: next }).eq('id', id);
+  if (error) {
+    showToast((error.message || '').includes('allow_download')
+      ? 'Chưa chạy SQL: supabase_allow_download.sql trên Supabase'
+      : error.message, false);
+    return;
+  }
+  showToast(next ? 'Học viên được tải file này' : 'Đã tắt tải xuống');
+  if (kind === 'video') renderLessonVideos(lessonId);
+  else renderLessonDocs(lessonId);
+}
+
+function resetLessonVideoModal() {
+  editingLessonVideoId = null;
+  editingLessonVideo = null;
+  pendingLessonVideoFile = null;
+  document.getElementById('lessonVideoModalTitle').textContent = 'Thêm video vào bài học';
+  document.getElementById('lvSaveBtn').textContent = 'Lưu';
+  document.getElementById('lessonPreviewVideo').src = '';
+  document.getElementById('lessonVideoFileInput').value = '';
+  document.getElementById('lvLinkInput').value = '';
+  document.getElementById('lvLinkPreview').innerHTML = '';
+  document.getElementById('lvEmbedInput').value = '';
+  document.getElementById('lvTitleInput').value = '';
+  const hint = document.getElementById('lvFileHint');
+  if (hint) hint.textContent = '';
+  const lvDl = document.getElementById('lvAllowDownload');
+  if (lvDl) lvDl.checked = false;
+  document.getElementById('tabVideoFile').click();
+}
+
+function openEditLessonVideo(v, url) {
+  resetLessonVideoModal();
+  editingLessonVideoId = v.id;
+  editingLessonVideo = v;
+  document.getElementById('lessonVideoModalTitle').textContent = 'Sửa video';
+  document.getElementById('lvSaveBtn').textContent = 'Lưu thay đổi';
+  document.getElementById('lvTitleInput').value = v.title || '';
+  const lvDl = document.getElementById('lvAllowDownload');
+  if (lvDl) lvDl.checked = mediaAllowDownload(v, 'video');
+  if (v.video_url) {
+    if (v.is_embed) {
+      document.getElementById('tabVideoEmbed').click();
+      document.getElementById('lvEmbedInput').value = url || '';
+    } else {
+      document.getElementById('tabVideoLink').click();
+      document.getElementById('lvLinkInput').value = url || '';
+    }
+  } else {
+    document.getElementById('tabVideoFile').click();
+    if (url) document.getElementById('lessonPreviewVideo').src = url;
+    const hint = document.getElementById('lvFileHint');
+    if (hint) hint.textContent = v.file_name ? `(hiện tại: ${v.file_name} — chọn file mới nếu muốn thay)` : '(chọn file mới nếu muốn thay)';
+  }
+  document.getElementById('lessonVideoModal').classList.add('open');
+}
+
+function resetLessonDocModal() {
+  editingLessonDocId = null;
+  editingLessonDoc = null;
+  pendingLessonDocFile = null;
+  document.getElementById('lessonDocModalTitle').textContent = 'Thêm tài liệu vào bài học';
+  document.getElementById('ldSaveBtn').textContent = 'Tải lên';
+  document.getElementById('lessonDocFileInfo').textContent = '';
+  document.getElementById('ldLinkInput').value = '';
+  document.getElementById('ldHandwrittenInput').value = '';
+  const titleWrap = document.getElementById('ldTitleWrap');
+  if (titleWrap) titleWrap.style.display = 'none';
+  document.getElementById('ldTitleInput').value = '';
+  const ldDl = document.getElementById('ldAllowDownload');
+  if (ldDl) ldDl.checked = true;
+  document.getElementById('tabDocFile').click();
+}
+
+function openEditLessonDoc(d, url) {
+  resetLessonDocModal();
+  editingLessonDocId = d.id;
+  editingLessonDoc = d;
+  document.getElementById('lessonDocModalTitle').textContent = 'Sửa tài liệu';
+  document.getElementById('ldSaveBtn').textContent = 'Lưu thay đổi';
+  const titleWrap = document.getElementById('ldTitleWrap');
+  if (titleWrap) titleWrap.style.display = '';
+  document.getElementById('ldTitleInput').value = d.title || '';
+  const ldDl = document.getElementById('ldAllowDownload');
+  if (ldDl) ldDl.checked = mediaAllowDownload(d, 'doc');
+  if (d.file_type === 'handwritten') {
+    document.getElementById('tabDocLink').click();
+    document.getElementById('ldHandwrittenInput').value = url || '';
+    document.getElementById('ldLinkInput').value = '';
+  } else if (d.file_type === 'link') {
+    document.getElementById('tabDocLink').click();
+    document.getElementById('ldLinkInput').value = url || '';
+    document.getElementById('ldHandwrittenInput').value = '';
+  } else {
+    document.getElementById('tabDocFile').click();
+    document.getElementById('lessonDocFileInfo').textContent = d.file_name ? `📎 Hiện tại: ${d.file_name} — chọn file mới nếu muốn thay` : '';
+  }
+  document.getElementById('lessonDocModal').classList.add('open');
+}
+
 async function renderLessonVideos(lessonId) {
   const { data:vids }=await db.from('lesson_videos').select('*').eq('lesson_id',lessonId).order('created_at');
   const grid=document.getElementById('lessonVideoGrid');
@@ -2626,12 +2750,23 @@ async function renderLessonVideos(lessonId) {
     const embed = isLink ? getEmbedUrl(url) : null;
     const card=document.createElement('div');
     card.className='video-card';
+    const allowed = mediaAllowDownload(v, 'video');
+    const dlBtn = `<button type="button" class="btn-sm ${allowed ? 'btn-outline' : ''}" style="${allowed ? '' : 'background:#fef3c7;color:#92400e;border:none'}" data-dl-toggle="1">${allowed ? '⬇ Được tải' : '🚫 Không tải'}</button>`;
+    const editBtn = `<button type="button" class="btn-sm btn-outline" data-edit="1">✏️ Sửa</button>`;
     if (embed) {
-      card.innerHTML=`<div class="video-thumb" style="background:#000;display:flex;align-items:center;justify-content:center"><span style="font-size:2rem">🔗</span><span class="play-btn">▶</span></div><div class="video-info"><div class="video-title">${v.title}</div><button class="btn-sm btn-danger del-btn">🗑 Xóa</button></div>`;
+      card.innerHTML=`<div class="video-thumb" style="background:#000;display:flex;align-items:center;justify-content:center"><span style="font-size:2rem">🔗</span><span class="play-btn">▶</span></div><div class="video-info"><div class="video-title">${v.title}</div><div class="row-actions" style="display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.35rem">${editBtn}${dlBtn}<button class="btn-sm btn-danger del-btn">🗑 Xóa</button></div></div>`;
     } else {
-      card.innerHTML=`<div class="video-thumb"><video src="${url}" preload="none"></video><span class="play-btn">▶</span></div><div class="video-info"><div class="video-title">${v.title}</div><button class="btn-sm btn-danger del-btn">🗑 Xóa</button></div>`;
+      card.innerHTML=`<div class="video-thumb"><video src="${url}" preload="none"></video><span class="play-btn">▶</span></div><div class="video-info"><div class="video-title">${v.title}</div><div class="row-actions" style="display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.35rem">${editBtn}${dlBtn}<button class="btn-sm btn-danger del-btn">🗑 Xóa</button></div></div>`;
     }
     card.querySelector('.video-thumb').addEventListener('click',()=>openViewer(v.title, url, v.file_name, isLink ? 'link' : 'video'));
+    card.querySelector('[data-edit]')?.addEventListener('click', e => {
+      e.stopPropagation();
+      openEditLessonVideo(v, url);
+    });
+    card.querySelector('[data-dl-toggle]')?.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleMediaDownload('video', v.id, !allowed, lessonId);
+    });
     card.querySelector('.del-btn').addEventListener('click', async ()=>{
       if (!isLink && v.storage_path) await db.storage.from('lessons').remove([v.storage_path]);
       await db.from('lesson_videos').delete().eq('id',v.id);
@@ -2657,8 +2792,19 @@ async function renderLessonDocs(lessonId) {
     const row=document.createElement('div');
     row.className='content-row clickable';
     const icon = isHandwritten ? '✍️' : isLink ? '🔗' : '📄';
-    row.innerHTML=`<span class="list-icon">${icon}</span><div class="list-info"><div class="list-title">${d.title}</div></div><div class="row-actions"><button class="btn-sm btn-danger">🗑</button></div>`;
+    const allowed = mediaAllowDownload(d, 'doc');
+    const dlBtn = `<button type="button" class="btn-sm ${allowed ? 'btn-outline' : ''}" style="${allowed ? '' : 'background:#fef3c7;color:#92400e;border:none'}" data-dl-toggle="1">${allowed ? '⬇ Được tải' : '🚫 Không tải'}</button>`;
+    const editBtn = `<button type="button" class="btn-sm btn-outline" data-edit="1">✏️ Sửa</button>`;
+    row.innerHTML=`<span class="list-icon">${icon}</span><div class="list-info"><div class="list-title">${d.title}</div></div><div class="row-actions">${editBtn}${dlBtn}<button class="btn-sm btn-danger">🗑</button></div>`;
     row.addEventListener('click', e=>{ if(!e.target.closest('.row-actions')) openViewer(isHandwritten?'Bản viết tay':d.title, url, d.file_name, isHandwritten?'handwritten-link':isLink?'doc-link':d.file_type); });
+    row.querySelector('[data-edit]')?.addEventListener('click', e => {
+      e.stopPropagation();
+      openEditLessonDoc(d, url);
+    });
+    row.querySelector('[data-dl-toggle]')?.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleMediaDownload('doc', d.id, !allowed, lessonId);
+    });
     row.querySelector('.btn-danger').addEventListener('click', async e=>{
       e.stopPropagation();
       if (!isLink && !isHandwritten && d.storage_path) await db.storage.from('lessons').remove([d.storage_path]);
@@ -2671,18 +2817,7 @@ async function renderLessonDocs(lessonId) {
 }
 
 document.getElementById('openAddVideoBtn').addEventListener('click', () => {
-  pendingLessonVideoFile = null;
-  document.getElementById('lessonPreviewVideo').src = '';
-  document.getElementById('lessonVideoFileInput').value = '';
-  document.getElementById('lvLinkInput').value = '';
-  document.getElementById('lvLinkPreview').innerHTML = '';
-  document.getElementById('lvEmbedInput').value = '';
-  document.getElementById('videoFileSection').style.display = '';
-  document.getElementById('videoLinkSection').style.display = 'none';
-  document.getElementById('videoEmbedSection').style.display = 'none';
-  document.getElementById('tabVideoFile').classList.add('active');
-  document.getElementById('tabVideoLink').classList.remove('active');
-  document.getElementById('tabVideoEmbed').classList.remove('active');
+  resetLessonVideoModal();
   document.getElementById('lessonVideoModal').classList.add('open');
 });
 
@@ -2718,66 +2853,97 @@ document.getElementById('lessonVideoFileInput').addEventListener('change', e => 
   const f = e.target.files[0]; if (!f) return;
   pendingLessonVideoFile = f;
   document.getElementById('lessonPreviewVideo').src = URL.createObjectURL(f);
-  document.getElementById('lvTitleInput').value = f.name.replace(/\.[^.]+$/, '');
+  if (!editingLessonVideoId) {
+    document.getElementById('lvTitleInput').value = f.name.replace(/\.[^.]+$/, '');
+  }
 });
 
 document.getElementById('lvCancelBtn').addEventListener('click', () => {
   document.getElementById('lessonVideoModal').classList.remove('open');
-  document.getElementById('lessonPreviewVideo').src = '';
-  pendingLessonVideoFile = null;
+  resetLessonVideoModal();
 });
 
 document.getElementById('lvSaveBtn').addEventListener('click', async () => {
   const isLinkTab  = document.getElementById('tabVideoLink').classList.contains('active');
   const isEmbedTab = document.getElementById('tabVideoEmbed').classList.contains('active');
   const title = document.getElementById('lvTitleInput').value.trim() || 'Video bài học';
+  const allow = !!document.getElementById('lvAllowDownload')?.checked;
   const btn = document.getElementById('lvSaveBtn');
+  const restoreBtn = () => { btn.textContent = editingLessonVideoId ? 'Lưu thay đổi' : 'Lưu'; btn.disabled = false; };
   btn.textContent = 'Đang lưu...'; btn.disabled = true;
 
+  if (editingLessonVideoId) {
+    const patch = { title, allow_download: allow };
+    if (isEmbedTab) {
+      const raw = document.getElementById('lvEmbedInput').value.trim();
+      if (!raw) { restoreBtn(); return; }
+      const srcMatch = raw.match(/src=["']([^"']+)["']/);
+      patch.video_url = await encryptUrl(srcMatch ? srcMatch[1] : raw);
+      patch.is_embed = true;
+      patch.storage_path = null;
+      patch.file_name = null;
+      if (editingLessonVideo?.storage_path) await db.storage.from('lessons').remove([editingLessonVideo.storage_path]);
+    } else if (isLinkTab) {
+      const url = document.getElementById('lvLinkInput').value.trim().split('\n').map(l=>l.trim()).filter(Boolean)[0];
+      if (!url) { restoreBtn(); return; }
+      patch.video_url = await encryptUrl(url);
+      patch.is_embed = false;
+      patch.storage_path = null;
+      patch.file_name = null;
+      if (editingLessonVideo?.storage_path) await db.storage.from('lessons').remove([editingLessonVideo.storage_path]);
+    } else if (pendingLessonVideoFile) {
+      const safeName = `${Date.now()}_${pendingLessonVideoFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
+      const path = `videos/${currentLessonId}/${safeName}`;
+      const { error: upErr } = await db.storage.from('lessons').upload(path, pendingLessonVideoFile, { cacheControl: '3600', upsert: false });
+      if (upErr) { alert('Lỗi upload: ' + upErr.message); restoreBtn(); return; }
+      if (editingLessonVideo?.storage_path) await db.storage.from('lessons').remove([editingLessonVideo.storage_path]);
+      patch.file_name = pendingLessonVideoFile.name;
+      patch.storage_path = path;
+      patch.video_url = null;
+      patch.is_embed = false;
+    }
+    const { error } = await db.from('lesson_videos').update(patch).eq('id', editingLessonVideoId);
+    if (error) { alert(error.message); restoreBtn(); return; }
+    logActivity('Video', 'Sửa video', title, `lesson:${currentLessonId}`);
+    document.getElementById('lessonVideoModal').classList.remove('open');
+    resetLessonVideoModal();
+    btn.disabled = false;
+    showToast('Đã cập nhật video');
+    renderLessonVideos(currentLessonId);
+    return;
+  }
+
   if (isEmbedTab) {
-    // Lưu mã nhúng — trích src từ iframe hoặc lưu nguyên mã
     const raw = document.getElementById('lvEmbedInput').value.trim();
-    if (!raw) { btn.textContent = 'Lưu'; btn.disabled = false; return; }
-    // Trích src từ thẻ iframe nếu có
+    if (!raw) { restoreBtn(); return; }
     const srcMatch = raw.match(/src=["']([^"']+)["']/);
     const embedUrl = srcMatch ? srcMatch[1] : raw;
-    await db.from('lesson_videos').insert({ lesson_id: currentLessonId, title, video_url: await encryptUrl(embedUrl), storage_path: null, file_name: null, is_embed: true });
+    await db.from('lesson_videos').insert({ lesson_id: currentLessonId, title, video_url: await encryptUrl(embedUrl), storage_path: null, file_name: null, is_embed: true, allow_download: allow });
   } else if (isLinkTab) {
     const raw = document.getElementById('lvLinkInput').value.trim();
-    if (!raw) { btn.textContent = 'Lưu'; btn.disabled = false; return; }
+    if (!raw) { restoreBtn(); return; }
     const links = raw.split('\n').map(l=>l.trim()).filter(Boolean);
     for (const url of links) {
-      await db.from('lesson_videos').insert({ lesson_id: currentLessonId, title, video_url: await encryptUrl(url), storage_path: null, file_name: null });
+      await db.from('lesson_videos').insert({ lesson_id: currentLessonId, title, video_url: await encryptUrl(url), storage_path: null, file_name: null, allow_download: allow });
     }
   } else {
-    if (!pendingLessonVideoFile) { btn.textContent = 'Lưu'; btn.disabled = false; return; }
+    if (!pendingLessonVideoFile) { restoreBtn(); return; }
     const safeName = `${Date.now()}_${pendingLessonVideoFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
     const path = `videos/${currentLessonId}/${safeName}`;
     const { error: upErr } = await db.storage.from('lessons').upload(path, pendingLessonVideoFile, { cacheControl: '3600', upsert: false });
-    if (upErr) { alert('Lỗi upload: ' + upErr.message); btn.textContent = 'Lưu'; btn.disabled = false; return; }
-    await db.from('lesson_videos').insert({ lesson_id: currentLessonId, title, file_name: pendingLessonVideoFile.name, storage_path: path, video_url: null });
+    if (upErr) { alert('Lỗi upload: ' + upErr.message); restoreBtn(); return; }
+    await db.from('lesson_videos').insert({ lesson_id: currentLessonId, title, file_name: pendingLessonVideoFile.name, storage_path: path, video_url: null, allow_download: allow });
   }
 
-  btn.textContent = 'Lưu'; btn.disabled = false;
   document.getElementById('lessonVideoModal').classList.remove('open');
-  document.getElementById('lessonPreviewVideo').src = '';
-  document.getElementById('lvEmbedInput').value = '';
-  pendingLessonVideoFile = null;
+  resetLessonVideoModal();
+  btn.disabled = false;
   logActivity('Video', 'Thêm video', title, `lesson:${currentLessonId}`);
   renderLessonVideos(currentLessonId);
 });
 
 document.getElementById('openAddDocBtn').addEventListener('click', () => {
-  pendingLessonDocFile = null;
-  document.getElementById('lessonDocFileInfo').textContent = '';
-  document.getElementById('ldLinkInput').value = '';
-  document.getElementById('ldHandwrittenInput').value = '';
-  document.getElementById('docFileSection').style.display = '';
-  document.getElementById('docLinkSection').style.display = 'none';
-  document.getElementById('docHandwrittenSection').style.display = 'none';
-  document.getElementById('tabDocFile').classList.add('active');
-  document.getElementById('tabDocLink').classList.remove('active');
-  document.getElementById('tabDocHandwritten').classList.remove('active');
+  resetLessonDocModal();
   document.getElementById('lessonDocModal').classList.add('open');
 });
 
@@ -2789,7 +2955,9 @@ document.getElementById('lessonDocInput').addEventListener('change', e=>{
   const f=e.target.files[0]; if(!f) return;
   pendingLessonDocFile=f;
   document.getElementById('lessonDocFileInfo').textContent=`📎 ${f.name}`;
-  document.getElementById('ldTitleInput').value=f.name.replace(/\.[^.]+$/,'');
+  if (!editingLessonDocId) {
+    document.getElementById('ldTitleInput').value=f.name.replace(/\.[^.]+$/,'');
+  }
   e.target.value='';
 });
 
@@ -2818,62 +2986,97 @@ document.getElementById('tabDocHandwritten').addEventListener('click', () => {
   document.getElementById('tabDocHandwritten').classList.add('active');
 });
 
-document.getElementById('ldCancelBtn').addEventListener('click',()=>{ document.getElementById('lessonDocModal').classList.remove('open'); pendingLessonDocFile=null; });
+document.getElementById('ldCancelBtn').addEventListener('click',()=>{
+  document.getElementById('lessonDocModal').classList.remove('open');
+  resetLessonDocModal();
+});
 document.getElementById('ldSaveBtn').addEventListener('click', async ()=>{
   const isLinkTab = document.getElementById('tabDocLink').classList.contains('active');
   const isHandwrittenTab = document.getElementById('tabDocHandwritten').classList.contains('active');
-  // Tự động tiêu đề theo loại
-  const title = isHandwrittenTab ? 'Bản viết tay' : isLinkTab ? 'Tài liệu' : (pendingLessonDocFile?.name.replace(/\.[^.]+$/,'') || 'Tài liệu');
+  const allow = document.getElementById('ldAllowDownload')?.checked !== false;
+  const toPreview = (url) => {
+    const gdMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+    return gdMatch ? `https://drive.google.com/file/d/${gdMatch[1]}/preview` : url;
+  };
+  const firstLine = (elId) => (document.getElementById(elId).value.trim().split('\n').map(l=>l.trim()).filter(Boolean)[0] || '');
   const btn = document.getElementById('ldSaveBtn');
+  const restoreBtn = () => { btn.textContent = editingLessonDocId ? 'Lưu thay đổi' : 'Tải lên'; btn.disabled = false; };
   btn.textContent='Đang lưu...'; btn.disabled=true;
 
+  if (editingLessonDocId) {
+    const title = document.getElementById('ldTitleInput').value.trim() || editingLessonDoc?.title || 'Tài liệu';
+    const patch = { title, allow_download: allow };
+    if (isHandwrittenTab || isLinkTab) {
+      const origHw = editingLessonDoc?.file_type === 'handwritten';
+      const rawHw = firstLine('ldHandwrittenInput');
+      const rawDoc = firstLine('ldLinkInput');
+      const raw = origHw ? (rawHw || rawDoc) : (rawDoc || rawHw);
+      if (!raw) { restoreBtn(); return; }
+      const asHw = origHw ? !!rawHw || !rawDoc : (!rawDoc && !!rawHw);
+      patch.doc_url = await encryptUrl(toPreview(raw));
+      patch.file_type = asHw ? 'handwritten' : 'link';
+      patch.storage_path = null;
+      patch.file_name = null;
+      if (editingLessonDoc?.storage_path) await db.storage.from('lessons').remove([editingLessonDoc.storage_path]);
+    } else if (pendingLessonDocFile) {
+      const safeName=`${Date.now()}_${pendingLessonDocFile.name.replace(/[^a-zA-Z0-9.\-_]/g,'_')}`;
+      const path=`docs/${currentLessonId}/${safeName}`;
+      const { error:upErr }=await db.storage.from('lessons').upload(path,pendingLessonDocFile);
+      if (upErr) { alert('Lỗi upload: '+upErr.message); restoreBtn(); return; }
+      if (editingLessonDoc?.storage_path) await db.storage.from('lessons').remove([editingLessonDoc.storage_path]);
+      patch.file_name = pendingLessonDocFile.name;
+      patch.file_type = pendingLessonDocFile.type;
+      patch.storage_path = path;
+      patch.doc_url = null;
+    }
+    const { error } = await db.from('lesson_docs').update(patch).eq('id', editingLessonDocId);
+    if (error) { alert(error.message); restoreBtn(); return; }
+    logActivity('Tài liệu', 'Sửa tài liệu', title, `lesson:${currentLessonId}`);
+    document.getElementById('lessonDocModal').classList.remove('open');
+    resetLessonDocModal();
+    btn.disabled = false;
+    showToast('Đã cập nhật tài liệu');
+    renderLessonDocs(currentLessonId);
+    return;
+  }
+
+  const title = isHandwrittenTab ? 'Bản viết tay' : isLinkTab ? 'Tài liệu' : (pendingLessonDocFile?.name.replace(/\.[^.]+$/,'') || 'Tài liệu');
+
   if (isHandwrittenTab) {
-    // Tab viết tay riêng (không dùng nữa nhưng giữ tương thích)
     const raw = document.getElementById('ldHandwrittenInput').value.trim();
-    if (!raw) { btn.textContent='Tải lên'; btn.disabled=false; return; }
+    if (!raw) { restoreBtn(); return; }
     const links = raw.split('\n').map(l=>l.trim()).filter(Boolean);
     for (let i=0; i<links.length; i++) {
       const url = links[i];
-      const gdMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-      const docUrl = gdMatch ? `https://drive.google.com/file/d/${gdMatch[1]}/preview` : url;
       const t = links.length > 1 ? `Bản viết tay ${i+1}` : 'Bản viết tay';
-      await db.from('lesson_docs').insert({lesson_id:currentLessonId, title:t, file_name:null, file_type:'handwritten', storage_path:null, doc_url:await encryptUrl(docUrl)});
+      await db.from('lesson_docs').insert({lesson_id:currentLessonId, title:t, file_name:null, file_type:'handwritten', storage_path:null, doc_url:await encryptUrl(toPreview(url)), allow_download: allow});
     }
   } else if (isLinkTab) {
-    // Tab tài liệu: lưu cả tài liệu + viết tay cùng lúc
     const rawDoc = document.getElementById('ldLinkInput').value.trim();
     const rawHw  = document.getElementById('ldHandwrittenInput').value.trim();
-    if (!rawDoc && !rawHw) { btn.textContent='Tải lên'; btn.disabled=false; return; }
+    if (!rawDoc && !rawHw) { restoreBtn(); return; }
     const docLinks = rawDoc ? rawDoc.split('\n').map(l=>l.trim()).filter(Boolean) : [];
     for (let i=0; i<docLinks.length; i++) {
-      const url = docLinks[i];
-      const gdMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-      const docUrl = gdMatch ? `https://drive.google.com/file/d/${gdMatch[1]}/preview` : url;
       const t = docLinks.length > 1 ? `Tài liệu ${i+1}` : 'Tài liệu';
-      await db.from('lesson_docs').insert({lesson_id:currentLessonId, title:t, file_name:null, file_type:'link', storage_path:null, doc_url:await encryptUrl(docUrl)});
+      await db.from('lesson_docs').insert({lesson_id:currentLessonId, title:t, file_name:null, file_type:'link', storage_path:null, doc_url:await encryptUrl(toPreview(docLinks[i])), allow_download: allow});
     }
     const hwLinks = rawHw ? rawHw.split('\n').map(l=>l.trim()).filter(Boolean) : [];
     for (let i=0; i<hwLinks.length; i++) {
-      const url = hwLinks[i];
-      const gdMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-      const docUrl = gdMatch ? `https://drive.google.com/file/d/${gdMatch[1]}/preview` : url;
       const t = hwLinks.length > 1 ? `Bản viết tay ${i+1}` : 'Bản viết tay';
-      await db.from('lesson_docs').insert({lesson_id:currentLessonId, title:t, file_name:null, file_type:'handwritten', storage_path:null, doc_url:await encryptUrl(docUrl)});
+      await db.from('lesson_docs').insert({lesson_id:currentLessonId, title:t, file_name:null, file_type:'handwritten', storage_path:null, doc_url:await encryptUrl(toPreview(hwLinks[i])), allow_download: allow});
     }
   } else {
-    if (!pendingLessonDocFile) { btn.textContent='Tải lên'; btn.disabled=false; return; }
+    if (!pendingLessonDocFile) { restoreBtn(); return; }
     const safeName=`${Date.now()}_${pendingLessonDocFile.name.replace(/[^a-zA-Z0-9.\-_]/g,'_')}`;
     const path=`docs/${currentLessonId}/${safeName}`;
     const { error:upErr }=await db.storage.from('lessons').upload(path,pendingLessonDocFile);
-    if (upErr) { alert('Lỗi upload: '+upErr.message); btn.textContent='Tải lên'; btn.disabled=false; return; }
-    await db.from('lesson_docs').insert({lesson_id:currentLessonId,title,file_name:pendingLessonDocFile.name,file_type:pendingLessonDocFile.type,storage_path:path,doc_url:null});
+    if (upErr) { alert('Lỗi upload: '+upErr.message); restoreBtn(); return; }
+    await db.from('lesson_docs').insert({lesson_id:currentLessonId,title,file_name:pendingLessonDocFile.name,file_type:pendingLessonDocFile.type,storage_path:path,doc_url:null, allow_download: allow});
   }
 
-  btn.textContent='Tải lên'; btn.disabled=false;
   document.getElementById('lessonDocModal').classList.remove('open');
-  document.getElementById('ldLinkInput').value='';
-  document.getElementById('ldHandwrittenInput').value='';
-  pendingLessonDocFile=null;
+  resetLessonDocModal();
+  btn.disabled=false;
   logActivity('Tài liệu', 'Thêm tài liệu', title, `lesson:${currentLessonId}`);
   renderLessonDocs(currentLessonId);
 });
@@ -3441,10 +3644,13 @@ document.getElementById('clearAlertsBtn').addEventListener('click', async ()=>{
 });
 
 // ---- Init ----
-const _validPages = ['overview','lessons','lesson-groups','create-student','students','classes','security','devices','access-stats','login-history','announcements','files','schedule','profile'];
+const _validPages = ['overview','lessons','lesson-groups','create-student','students','classes','security','devices','access-stats','login-history','announcements','files','library','groups','schedule','profile','feedback-admin'];
 const _savedPage = sessionStorage.getItem('dh_page');
 populateClassFilters().then(() => {
-  showPage(_validPages.includes(_savedPage) ? _savedPage : 'overview');
+  const fromHash = location.hash === '#feedback-admin' ? 'feedback-admin' : null;
+  showPage(_validPages.includes(fromHash) ? fromHash : (_validPages.includes(_savedPage) ? _savedPage : 'overview'));
+  refreshLibBadge().catch(() => {});
+  refreshZgBadge().catch(() => {});
 });
 
 // ============================================================
@@ -3986,6 +4192,59 @@ db.channel('realtime-alerts')
       payload.new?.student_name
         ? `${payload.new.student_name} — ${(payload.new.reason||'').slice(0,80)}`
         : 'Có cảnh báo bảo mật mới');
+  })
+  .subscribe();
+
+db.channel('realtime-library-suggestions')
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'library_suggestions' }, async (payload) => {
+    const nw = payload.new || {};
+    let who = (nw.student_name || '').trim();
+    if ((!who || who === 'Học sinh') && nw.username) {
+      try {
+        const { data: st } = await db.from('students').select('full_name').eq('username', nw.username).maybeSingle();
+        if (st?.full_name) who = st.full_name.trim();
+      } catch (e) {}
+    }
+    who = who || nw.username || 'Học sinh';
+    refreshLibBadge();
+    if (document.getElementById('pageLibrary')?.classList.contains('active')) renderLibraryAdmin();
+    _adminNotify('💡 Đề xuất thư viện', `${who} — ${(nw.title || '').slice(0, 70)}`, 'info');
+    _adminBrowserNotify('💡 Đề xuất thư viện mới',
+      `${who} đề xuất: ${(nw.title || '').slice(0, 80)}`);
+  })
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'library_suggestions' }, () => {
+    refreshLibBadge();
+    if (document.getElementById('pageLibrary')?.classList.contains('active')) renderLibraryAdmin();
+  })
+  .subscribe();
+
+db.channel('realtime-library-reports')
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'library_reports' }, (payload) => {
+    const nw = payload.new || {};
+    refreshLibBadge();
+    if (document.getElementById('pageLibrary')?.classList.contains('active')) renderLibraryAdmin();
+    _adminNotify('⚠️ Báo cáo thư viện', `${nw.student_name || 'Học sinh'} — ${(nw.reason || nw.title || '').slice(0, 70)}`, 'warn');
+    _adminBrowserNotify('⚠️ Báo cáo nguồn thư viện',
+      `${nw.student_name || 'Học sinh'}: ${(nw.reason || '').slice(0, 80)}`);
+  })
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'library_reports' }, () => {
+    refreshLibBadge();
+    if (document.getElementById('pageLibrary')?.classList.contains('active')) renderLibraryAdmin();
+  })
+  .subscribe();
+
+db.channel('realtime-zg-suggestions')
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'discussion_group_suggestions' }, (payload) => {
+    const nw = payload.new || {};
+    refreshZgBadge();
+    if (document.getElementById('pageGroups')?.classList.contains('active')) renderZaloGroupsAdmin();
+    _adminNotify('💬 Đề xuất mở nhóm', `${nw.student_name || 'Học sinh'} — ${(nw.name || '').slice(0, 70)}`, 'info');
+    _adminBrowserNotify('💬 Đề xuất mở nhóm',
+      `${nw.student_name || 'Học sinh'} đề xuất: ${(nw.name || '').slice(0, 80)}`);
+  })
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'discussion_group_suggestions' }, () => {
+    refreshZgBadge();
+    if (document.getElementById('pageGroups')?.classList.contains('active')) renderZaloGroupsAdmin();
   })
   .subscribe();
 
@@ -6568,7 +6827,7 @@ async function doBulkCreate() {
 // ============================================================
 
 // ⚠️ AbstractAPI Email Validation key — https://app.abstractapi.com/api/email-validation
-const _ABSTRACT_EMAIL_KEY = '11ea460b7a2340ce82c50f41a8f5cb19';
+const _ABSTRACT_EMAIL_KEY = DH_CFG.abstractKey;
 
 // Cache kết quả tránh gọi API nhiều lần cùng 1 gmail
 const _gmailCheckCache = {};
@@ -6837,7 +7096,28 @@ const _ADMIN_GUIDE_DATA = [
     'Chọn lớp → Phân tích → Bấm <b>Đồng bộ</b>',
     'Tự thêm lớp phụ và gửi thông báo cho học sinh',
   ]},
-  // ── BÀI HỌC ──
+  // ── THƯ VIỆN SỐ ──
+  { cat:'file', icon:'💬', title:'Tạo nhóm trao đổi Zalo', steps:[
+    'Sidebar → <b>Nhóm trao đổi</b>',
+    'Trên Zalo: mở nhóm → Quản lý → <b>Liên kết tham gia</b> → copy link zalo.me',
+    'Dán link, đặt tên nhóm, chọn lớp (hoặc tất cả lớp)',
+    'Học sinh vào trang Nhóm trao đổi → chọn nhóm → nhập <b>đúng mã HV</b> → tự mở Zalo vào nhóm',
+    'Học sinh cũng có thể <b>đề xuất mở nhóm</b> nếu lớp chưa có nhóm',
+  ]},
+  { cat:'file', icon:'💡', title:'Duyệt đề xuất mở nhóm Zalo', steps:[
+    'Học sinh gửi đề xuất ở trang <b>Nhóm trao đổi</b>',
+    'Admin nhận thông báo ngay (popup + badge trên menu)',
+    'Sidebar → <b>Nhóm trao đổi</b> → bấm <b>Mở nhóm</b> để điền sẵn form',
+    'Tạo nhóm trên Zalo, dán link zalo.me, chỉnh tên/lớp nếu cần → <b>Lưu nhóm</b>',
+    'Đề xuất chuyển sang Đã mở — học sinh thấy nhóm mới trên trang của mình',
+  ]},
+  { cat:'file', icon:'🏛️', title:'Duyệt đề xuất thư viện số', steps:[
+    'Học sinh gửi nguồn ở trang <b>Thư viện số</b>',
+    'Admin nhận thông báo ngay (popup + badge trên menu)',
+    'Sidebar → <b>Thư viện số → Chờ duyệt</b>',
+    'Kiểm tra link, chỉnh tên/mô tả nếu cần → <b>Thêm vào thư viện</b>',
+    'Nguồn hiện ngay trên trang học sinh với nhãn <b>Mới</b>',
+  ]},
   { cat:'lesson', icon:'📂', title:'Tạo nhóm bài học', steps:[
     'Sidebar → <b>Nhóm bài học → Thêm nhóm</b>',
     'Nhập tên nhóm, chọn lớp, giới hạn học sinh nếu cần',
@@ -6854,11 +7134,15 @@ const _ADMIN_GUIDE_DATA = [
     'Click vào bài học → tab <b>Video</b> → <b>Thêm video</b>',
     'Hỗ trợ: Link URL (Drive/YouTube), Mã nhúng iframe, Upload file',
     'Google Drive: chọn "Chia sẻ → Bất kỳ ai có link"',
+    'Tick <b>Cho phép học viên tải xuống</b> nếu muốn học viên tải file (mặc định video: không)',
+    'Video đã có: nút <b>✏️ Sửa</b> để đổi tiêu đề, link, hoặc thay file',
   ]},
   { cat:'lesson', icon:'📄', title:'Thêm tài liệu cho bài học', steps:[
     'Click vào bài học → tab <b>Tài liệu</b> → <b>Tải lên</b>',
     'Hỗ trợ Link URL, file PDF/Word/Excel/ảnh',
     'Loại <b>Bản viết tay</b>: ảnh chụp tay — phân loại riêng',
+    'Tick <b>Cho phép học viên tải xuống</b> (mặc định: có). Tắt nếu chỉ cho xem trên web',
+    'Tài liệu đã có: nút <b>✏️ Sửa</b> để đổi tên, link, hoặc thay file',
   ]},
   // ── LỚP HỌC ──
   { cat:'class', icon:'🏫', title:'Tạo & quản lý lớp học', steps:[
@@ -6902,6 +7186,13 @@ const _ADMIN_GUIDE_DATA = [
     'Xem theo tuần, thêm buổi học mới',
     'Chọn lớp, giờ bắt đầu/kết thúc, môn học',
     'Học sinh xem lịch trong trang của mình',
+  ]},
+  { cat:'system', icon:'💡', title:'Góp ý buổi học', steps:[
+    'Sidebar → <b>Góp ý buổi học → Mở góp ý buổi mới</b>',
+    'Có thể lấy sẵn từ buổi điểm danh, hoặc nhập tiêu đề / lớp / ngày',
+    'Học viên vào mục Góp ý, chọn tốc độ + mức hiểu bài + viết ý kiến',
+    'Bấm <b>Tổng hợp</b> để xem điểm TB, biểu đồ, danh sách góp ý, học viên chưa gửi',
+    'Ghi chú điều chỉnh buổi sau ngay trong chi tiết — xuất CSV nếu cần',
   ]},
   { cat:'system', icon:'⚙️', title:'Quản trị hệ thống', steps:[
     'Cuối sidebar → <b>⚙️ Quản trị hệ thống</b> (chỉ Teacher)',
@@ -7006,3 +7297,844 @@ function adminFilterGuide(q) {
       </div>`;
   }).join('');
 }
+
+
+
+
+function libReadFields(prefix) {
+  return {
+    title: (document.getElementById(prefix + '_title')?.value || '').trim(),
+    url: libSafeUrl(document.getElementById(prefix + '_url')?.value || ''),
+    source: (document.getElementById(prefix + '_source')?.value || '').trim(),
+    category: document.getElementById(prefix + '_cat')?.value || 'open',
+    description: (document.getElementById(prefix + '_desc')?.value || '').trim(),
+    tags: (document.getElementById(prefix + '_tags')?.value || 'Mới').trim(),
+    icon: (document.getElementById(prefix + '_icon')?.value || '✨').trim() || '✨',
+    color: (document.getElementById(prefix + '_color')?.value || '#fef3c7').trim() || '#fef3c7'
+  };
+}
+
+function libUpdatePreview(prefix) {
+  const title = document.getElementById(prefix + '_title')?.value.trim() || 'Tên nguồn sẽ hiện ở đây';
+  const source = document.getElementById(prefix + '_source')?.value.trim() || 'Đơn vị phát hành';
+  const desc = document.getElementById(prefix + '_desc')?.value.trim() || 'Mô tả ngắn để học sinh biết nên dùng khi nào.';
+  const icon = document.getElementById(prefix + '_icon')?.value || '✨';
+  const color = document.getElementById(prefix + '_color')?.value || '#fef3c7';
+  const ico = document.getElementById(prefix + '_prevIco');
+  const src = document.getElementById(prefix + '_prevSrc');
+  const t = document.getElementById(prefix + '_prevTitle');
+  const d = document.getElementById(prefix + '_prevDesc');
+  if (ico) { ico.style.background = color; ico.textContent = icon; }
+  if (src) src.textContent = source;
+  if (t) t.textContent = title;
+  if (d) d.textContent = desc;
+}
+
+function libBindForm(prefix) {
+  const wrap = document.getElementById(prefix + '_title')?.closest('.lib-sheet-body, .lib-fields, #libAdminManual, #libAdminList');
+  const root = wrap || document.getElementById('pageLibrary');
+  root?.addEventListener('input', () => libUpdatePreview(prefix));
+  root?.addEventListener('change', () => libUpdatePreview(prefix));
+  libUpdatePreview(prefix);
+}
+
+function renderLibManualForm() {
+  const manEl = document.getElementById('libAdminManual');
+  manEl.innerHTML = `
+    <div class="lib-sheet">
+      <div class="lib-sheet-head">
+        <h3>Thêm nguồn thủ công</h3>
+        <p>Điền thông tin bên trái — xem trước thẻ học sinh sẽ thấy bên phải.</p>
+      </div>
+      <div class="lib-sheet-body">
+        <div class="lib-form-grid">
+          <div>
+            ${libEditFields({ category:'open', tags:'Mới, Admin thêm', icon:'✨', color:'#fef3c7' }, 'm')}
+            <div style="margin-top:1.1rem;display:flex;align-items:center;gap:.7rem;flex-wrap:wrap">
+              <button type="button" class="lib-gold-btn" id="libManualSave">Thêm vào thư viện</button>
+              <span id="libManualMsg" style="font-size:.82rem;font-weight:600"></span>
+            </div>
+          </div>
+          <div class="lib-preview">
+            <div class="lib-preview-kicker">Xem trước</div>
+            <div class="lib-preview-card">
+              <div class="lib-preview-top">
+                <div class="lib-preview-ico" id="m_prevIco" style="background:#fef3c7">✨</div>
+                <span class="lib-preview-src" id="m_prevSrc">Đơn vị phát hành</span>
+              </div>
+              <h4 id="m_prevTitle">Tên nguồn sẽ hiện ở đây</h4>
+              <p id="m_prevDesc">Mô tả ngắn để học sinh biết nên dùng khi nào.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  libBindForm('m');
+  document.getElementById('libManualSave').onclick = async () => {
+    const f = libReadFields('m');
+    const msg = document.getElementById('libManualMsg');
+    if (!f.title || !f.url) { msg.textContent = 'Nhập tên và link https://'; msg.style.color = '#b91c1c'; return; }
+    const { error } = await db.from('library_resources').insert({
+      ...f, added_by: sessionStorage.getItem('dh_name') || sessionStorage.getItem('dh_user') || 'admin', active: true
+    });
+    if (error) { msg.textContent = error.message; msg.style.color = '#b91c1c'; return; }
+    showToast('Đã thêm vào thư viện số');
+    _libTab = 'approved';
+    renderLibraryAdmin();
+  };
+}
+
+document.getElementById('libAdminTabs')?.addEventListener('click', e => {
+  const btn = e.target.closest('[data-libtab]');
+  if (!btn) return;
+  _libTab = btn.dataset.libtab;
+  renderLibraryAdmin();
+});
+
+document.getElementById('pageLibrary')?.addEventListener('click', e => {
+  const pick = e.target.closest('[data-lib-pick]');
+  if (!pick) return;
+  e.preventDefault();
+  const prefix = pick.dataset.libPick;
+  const val = pick.dataset.val;
+  const row = pick.parentElement;
+  if (row?.classList.contains('lib-ico-row')) {
+    const inp = document.getElementById(prefix + '_icon');
+    if (inp) inp.value = val;
+    row.querySelectorAll('.lib-ico-btn').forEach(b => b.classList.toggle('active', b === pick));
+  } else {
+    const inp = document.getElementById(prefix + '_color');
+    if (inp) inp.value = val;
+    row.querySelectorAll('.lib-color-btn').forEach(b => b.classList.toggle('active', b === pick));
+  }
+  libUpdatePreview(prefix);
+});
+
+document.getElementById('libAdminList')?.addEventListener('click', async e => {
+  const openBtn = e.target.closest('[data-lib-open]');
+  const saveBtn = e.target.closest('[data-lib-save]');
+  const rejectBtn = e.target.closest('[data-lib-reject]');
+  const hideBtn = e.target.closest('[data-lib-hide]');
+  const delBtn = e.target.closest('[data-lib-del]');
+  const restoreBtn = e.target.closest('[data-lib-restore]');
+  const rptOk = e.target.closest('[data-lib-rpt-ok]');
+  const rptHide = e.target.closest('[data-lib-rpt-hide]');
+
+  if (openBtn) {
+    const box = document.getElementById('libEdit_' + openBtn.dataset.libOpen);
+    if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    return;
+  }
+  if (restoreBtn) {
+    showConfirm('Khôi phục nguồn này lên trang thư viện học sinh?', async () => {
+      const { data: rec } = await db.from('library_resources').select('suggestion_id').eq('id', restoreBtn.dataset.libRestore).maybeSingle();
+      await db.from('library_resources').update({ active: true }).eq('id', restoreBtn.dataset.libRestore);
+      if (rec?.suggestion_id) {
+        await db.from('library_suggestions').update({
+          status: 'approved',
+          admin_note: 'Đã khôi phục vào thư viện.',
+          reviewed_at: new Date().toISOString()
+        }).eq('id', rec.suggestion_id);
+      }
+      showToast('Đã khôi phục vào thư viện');
+      renderLibraryAdmin();
+    }, { title: 'Khôi phục', icon: '🏛️', okText: 'Khôi phục' });
+    return;
+  }
+  if (rptOk) {
+    await db.from('library_reports').update({
+      status: 'reviewed',
+      admin_note: 'Đã xem — giữ nguồn trên thư viện.'
+    }).eq('id', rptOk.dataset.libRptOk);
+    showToast('Đã đánh dấu đã xem');
+    refreshLibBadge();
+    renderLibraryAdmin();
+    return;
+  }
+  if (rptHide) {
+    showConfirm('Gỡ nguồn này khỏi thư viện theo báo cáo của học sinh?', async () => {
+      const rid = rptHide.dataset.libRptHide;
+      const { data: rec } = await db.from('library_resources').select('suggestion_id').eq('id', rid).maybeSingle();
+      await db.from('library_resources').update({ active: false }).eq('id', rid);
+      if (rec?.suggestion_id) {
+        await db.from('library_suggestions').update({
+          status: 'removed',
+          admin_note: 'Đề xuất đã bị gỡ khỏi thư viện (từ báo cáo).',
+          reviewed_at: new Date().toISOString()
+        }).eq('id', rec.suggestion_id);
+      }
+      await db.from('library_reports').update({
+        status: 'reviewed',
+        admin_note: 'Đã gỡ nguồn khỏi thư viện.'
+      }).eq('id', rptHide.dataset.libRptId);
+      showToast('Đã gỡ nguồn theo báo cáo');
+      refreshLibBadge();
+      renderLibraryAdmin();
+    }, { title: 'Gỡ nguồn', icon: '⚠️', okText: 'Gỡ' });
+    return;
+  }
+  if (hideBtn) {
+    showConfirm('Gỡ nguồn này khỏi trang thư viện học sinh? Học sinh sẽ thấy “Đề xuất đã bị gỡ”.', async () => {
+      const { data: rec } = await db.from('library_resources').select('suggestion_id').eq('id', hideBtn.dataset.libHide).maybeSingle();
+      await db.from('library_resources').update({ active: false }).eq('id', hideBtn.dataset.libHide);
+      if (rec?.suggestion_id) {
+        await db.from('library_suggestions').update({
+          status: 'removed',
+          admin_note: 'Đề xuất đã bị gỡ khỏi thư viện.',
+          reviewed_at: new Date().toISOString()
+        }).eq('id', rec.suggestion_id);
+      }
+      showToast('Đã gỡ khỏi thư viện');
+      renderLibraryAdmin();
+    }, { title: 'Gỡ nguồn', icon: '🏛️', okText: 'Gỡ' });
+    return;
+  }
+  if (delBtn) {
+    showConfirm('Xóa hẳn nguồn này khỏi thư viện? Học sinh sẽ thấy “Đề xuất này đã bị xóa khỏi thư viện”.', async () => {
+      const { data: rec } = await db.from('library_resources').select('suggestion_id').eq('id', delBtn.dataset.libDel).maybeSingle();
+      await db.from('library_resources').delete().eq('id', delBtn.dataset.libDel);
+      if (rec?.suggestion_id) {
+        await db.from('library_suggestions').update({
+          status: 'deleted',
+          admin_note: 'Đề xuất này đã bị xóa khỏi thư viện.',
+          reviewed_at: new Date().toISOString()
+        }).eq('id', rec.suggestion_id);
+      }
+      showToast('Đã xóa khỏi thư viện');
+      renderLibraryAdmin();
+    }, { title: 'Xóa nguồn', icon: '🗑️', okText: 'Xóa' });
+    return;
+  }
+  if (rejectBtn) {
+    const note = window.prompt('Lý do từ chối (tuỳ chọn):') || '';
+    await db.from('library_suggestions').update({
+      status: 'rejected',
+      admin_note: note || 'Không phù hợp / chưa đủ uy tín',
+      reviewed_at: new Date().toISOString()
+    }).eq('id', rejectBtn.dataset.libReject);
+    showToast('Đã từ chối đề xuất');
+    refreshLibBadge();
+    renderLibraryAdmin();
+    return;
+  }
+  if (saveBtn) {
+    const id = saveBtn.dataset.libSave;
+    const f = libReadFields('s' + id);
+    if (!f.title || !f.url) { showToast('Nhập tên và link hợp lệ', false); return; }
+    const { data: sug } = await db.from('library_suggestions').select('student_name,username').eq('id', id).maybeSingle();
+    let who = (sug?.student_name || '').trim();
+    if (sug?.username) {
+      const { data: st } = await db.from('students').select('full_name').eq('username', sug.username).maybeSingle();
+      if (st?.full_name) who = st.full_name.trim();
+    }
+    const tags = f.tags
+      .split(',')
+      .map(t => t.trim())
+      .filter(t => t && t !== 'Học sinh đề xuất');
+    if (who && !tags.some(t => t.includes(who))) tags.push('Đề xuất bởi ' + who);
+    const { error } = await db.from('library_resources').insert({
+      ...f,
+      tags: tags.join(', ') || f.tags,
+      color: '#fef3c7',
+      suggestion_id: Number(id),
+      added_by: sessionStorage.getItem('dh_name') || sessionStorage.getItem('dh_user') || 'admin',
+      active: true
+    });
+    if (error) { showToast(error.message, false); return; }
+    await db.from('library_suggestions').update({
+      status: 'approved',
+      reviewed_at: new Date().toISOString()
+    }).eq('id', id);
+    showToast('Đã thêm vào thư viện số — học sinh thấy ngay');
+    refreshLibBadge();
+    _libTab = 'approved';
+    renderLibraryAdmin();
+  }
+});
+
+// ============================================================
+// NHÓM TRAO ĐỔI ZALO
+// ============================================================
+const ZG_ICONS = ['💬','📘','🏫','⭐','🔥','📢','🧮','🎓'];
+let _zgEditId = null;
+let _zgSuggestId = null;
+
+async function refreshZgBadge() {
+  const box = document.getElementById('zgNavBadge');
+  const ov = document.getElementById('zgPendingOverview');
+  try {
+    const { count, error } = await db.from('discussion_group_suggestions').select('*', { count:'exact', head:true }).eq('status', 'pending');
+    if (error) throw error;
+    const n = count || 0;
+    if (box) { box.style.display = n ? 'inline' : 'none'; box.textContent = n; }
+    if (ov) {
+      ov.innerHTML = n
+        ? `<div style="background:#dbeafe;border-left:4px solid #2563eb;padding:.75rem 1rem;border-radius:8px;font-size:.88rem">💬 Có <b>${n}</b> đề xuất mở nhóm đang chờ. <a href="#" class="link-blue" onclick="showPage('groups');return false">Xem ngay →</a></div>`
+        : '';
+    }
+  } catch (e) {
+    if (box) box.style.display = 'none';
+  }
+}
+
+function isZaloUrl(u) {
+  try {
+    const x = new URL((u || '').trim());
+    const h = x.hostname.replace(/^www\./, '').toLowerCase();
+    return x.protocol === 'https:' && (h === 'zalo.me' || h === 'zaloapp.com' || h.endsWith('.zalo.me'));
+  } catch { return false; }
+}
+
+function renderZgIcons(current) {
+  const row = document.getElementById('zgIconRow');
+  if (!row) return;
+  const cur = current || document.getElementById('zgIcon')?.value || '💬';
+  row.innerHTML = ZG_ICONS.map(ico =>
+    `<button type="button" class="lib-ico-btn${ico===cur?' active':''}" data-zg-ico="${ico}">${ico}</button>`
+  ).join('');
+}
+
+function resetZgForm() {
+  _zgEditId = null;
+  _zgSuggestId = null;
+  document.getElementById('zgFormTitle').textContent = 'Tạo nhóm mới';
+  document.getElementById('zgName').value = '';
+  document.getElementById('zgUrl').value = '';
+  document.getElementById('zgDesc').value = '';
+  document.getElementById('zgClass').value = '';
+  document.getElementById('zgIcon').value = '💬';
+  document.getElementById('zgResetBtn').style.display = 'none';
+  document.getElementById('zgFormMsg').textContent = '';
+  renderZgIcons('💬');
+}
+
+function zgSetClass(cls) {
+  const sel = document.getElementById('zgClass');
+  if (!sel) return;
+  const v = (cls || '').trim();
+  if (v && ![...sel.options].some(o => o.value === v)) {
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    sel.appendChild(opt);
+  }
+  sel.value = v;
+}
+
+async function zgFillFromSuggest(s) {
+  await populateClassFilters();
+  _zgEditId = null;
+  _zgSuggestId = s.id;
+  document.getElementById('zgFormTitle').textContent = 'Tạo nhóm từ đề xuất';
+  document.getElementById('zgName').value = s.name || '';
+  document.getElementById('zgUrl').value = '';
+  document.getElementById('zgDesc').value = s.reason || '';
+  zgSetClass(s.class_name || '');
+  document.getElementById('zgIcon').value = '💬';
+  document.getElementById('zgResetBtn').style.display = '';
+  document.getElementById('zgFormMsg').textContent = 'Tạo nhóm Zalo rồi dán link vào đây.';
+  document.getElementById('zgFormMsg').style.color = '#92400e';
+  renderZgIcons('💬');
+  document.getElementById('zgUrl').focus();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function renderZgPending() {
+  const box = document.getElementById('zgPendingList');
+  if (!box) return;
+  const { data, error } = await db.from('discussion_group_suggestions').select('*').eq('status', 'pending').order('created_at', { ascending: false }).limit(50);
+  if (error || !data || !data.length) { box.innerHTML = ''; return; }
+  const nameByUser = {};
+  const users = [...new Set(data.map(s => s.username).filter(Boolean))];
+  if (users.length) {
+    const { data: sts } = await db.from('students').select('username,full_name,class_name').in('username', users);
+    (sts || []).forEach(st => { nameByUser[st.username] = st; });
+  }
+  box.innerHTML = `
+    <div class="lib-sheet" style="margin-bottom:1.15rem;border-color:#93c5fd">
+      <div class="lib-sheet-head" style="background:#eff6ff">
+        <h3>Đề xuất mở nhóm (${data.length})</h3>
+        <p>Học sinh gửi từ trang Nhóm trao đổi. Bấm <b>Mở nhóm</b> để điền form bên dưới.</p>
+      </div>
+      <div class="lib-sheet-body" style="display:flex;flex-direction:column;gap:.75rem">
+        ${data.map(s => {
+          const when = s.created_at ? new Date(s.created_at).toLocaleString('vi-VN') : '';
+          const st = s.username ? nameByUser[s.username] : null;
+          const who = (st?.full_name || s.student_name || s.username || 'Học sinh').trim();
+          const cls = (st?.class_name || s.class_name || '').trim();
+          return `
+            <div class="lib-card" style="margin:0">
+              <div style="display:flex;justify-content:space-between;gap:.6rem;flex-wrap:wrap;align-items:flex-start">
+                <div style="min-width:0">
+                  <div style="font-weight:800;font-size:1.02rem">${libEsc(s.name)}</div>
+                  <div class="lib-who-admin" style="margin:.4rem 0 .45rem">
+                    <span class="lib-who-kicker">Học viên đề xuất</span>
+                    <b>${libEsc(who)}</b>
+                    ${cls ? `<span>· ${libEsc(cls)}</span>` : ''}
+                    ${s.username ? `<span>· ${libEsc(s.username)}</span>` : ''}
+                    ${s.student_code ? `<span>· mã ${libEsc(s.student_code)}</span>` : ''}
+                  </div>
+                  ${when ? `<div style="font-size:.75rem;color:var(--muted);margin-bottom:.35rem">${libEsc(when)}</div>` : ''}
+                  ${s.reason ? `<p style="font-size:.84rem;margin:0;line-height:1.55">${libEsc(s.reason)}</p>` : ''}
+                </div>
+                <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+                  <button type="button" class="lib-gold-btn" style="padding:.5rem .9rem;font-size:.82rem;width:auto" data-zg-open="${s.id}">Mở nhóm</button>
+                  <button type="button" class="btn-sm btn-outline" data-zg-reject="${s.id}">Từ chối</button>
+                </div>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+async function renderZaloGroupsAdmin() {
+  populateClassFilters();
+  renderZgIcons(document.getElementById('zgIcon')?.value);
+  refreshZgBadge().catch(() => {});
+  await renderZgPending();
+  const listEl = document.getElementById('zgAdminList');
+  const { data, error } = await db.from('discussion_groups').select('*').order('created_at', { ascending: false });
+  if (error) {
+    listEl.innerHTML = '<div class="lib-empty">Chưa có bảng nhóm. Chạy file <b>supabase_zalo_groups.sql</b> rồi tải lại trang.</div>';
+    return;
+  }
+  const groups = data || [];
+  if (!groups.length) {
+    listEl.innerHTML = '<div class="lib-empty">Chưa có nhóm nào. Tạo nhóm và dán link Zalo ở form trên, hoặc duyệt đề xuất của học sinh.</div>';
+    return;
+  }
+  const ids = groups.map(g => g.id);
+  const { data: joins } = await db.from('discussion_group_joins').select('group_id').in('group_id', ids);
+  const counts = {};
+  (joins || []).forEach(j => { counts[j.group_id] = (counts[j.group_id] || 0) + 1; });
+
+  listEl.innerHTML = groups.map(g => `
+    <div class="lib-card">
+      <div style="display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;align-items:flex-start">
+        <div style="display:flex;gap:.8rem;min-width:0">
+          <div class="lib-preview-ico" style="background:${libEsc(g.color || '#dbeafe')}">${g.icon || '💬'}</div>
+          <div>
+            <div style="font-weight:800">${libEsc(g.name)} ${g.active ? '' : '<span style="font-size:.72rem;color:#b91c1c">· Ẩn</span>'}</div>
+            <div style="font-size:.78rem;color:var(--muted);margin-top:.2rem">${libEsc(g.class_name || 'Mọi lớp')} · ${counts[g.id] || 0} lượt vào</div>
+            <div style="font-size:.8rem;margin-top:.25rem;color:var(--text)">${libEsc(g.description || '')}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+          <button class="btn-sm btn-outline" data-zg-edit="${g.id}">Sửa</button>
+          <button class="btn-sm btn-outline" data-zg-toggle="${g.id}" data-on="${g.active ? '1' : '0'}">${g.active ? 'Ẩn' : 'Hiện'}</button>
+          <button class="btn-sm btn-outline" data-zg-del="${g.id}" style="color:#ef4444;border-color:#fca5a5">Xóa</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('zgIconRow')?.addEventListener('click', e => {
+  const btn = e.target.closest('[data-zg-ico]');
+  if (!btn) return;
+  document.getElementById('zgIcon').value = btn.dataset.zgIco;
+  renderZgIcons(btn.dataset.zgIco);
+});
+
+document.getElementById('zgResetBtn')?.addEventListener('click', resetZgForm);
+
+document.getElementById('zgSaveBtn')?.addEventListener('click', async () => {
+  const msg = document.getElementById('zgFormMsg');
+  const name = (document.getElementById('zgName').value || '').trim();
+  const rawUrl = (document.getElementById('zgUrl').value || '').trim();
+  if (!name) { msg.textContent = 'Nhập tên nhóm.'; msg.style.color = '#b91c1c'; return; }
+  if (!isZaloUrl(rawUrl)) { msg.textContent = 'Link phải là https://zalo.me/...'; msg.style.color = '#b91c1c'; return; }
+  const zalo_url = await encryptUrl(rawUrl);
+  const payload = {
+    name,
+    zalo_url,
+    description: (document.getElementById('zgDesc').value || '').trim() || null,
+    class_name: document.getElementById('zgClass').value || null,
+    icon: document.getElementById('zgIcon').value || '💬',
+    color: '#dbeafe',
+    active: true
+  };
+  let error, createdId = _zgEditId;
+  const suggestId = _zgSuggestId;
+  if (_zgEditId) {
+    ({ error } = await db.from('discussion_groups').update(payload).eq('id', _zgEditId));
+  } else {
+    const ins = await db.from('discussion_groups').insert(payload).select('id').single();
+    error = ins.error;
+    createdId = ins.data?.id;
+  }
+  if (error) { msg.textContent = error.message; msg.style.color = '#b91c1c'; return; }
+  if (suggestId) {
+    const upd = { status: 'approved', reviewed_at: new Date().toISOString(), admin_note: 'Đã mở nhóm từ đề xuất.' };
+    if (createdId) upd.group_id = createdId;
+    const { error: e2 } = await db.from('discussion_group_suggestions').update(upd).eq('id', suggestId);
+    if (e2 && createdId) {
+      delete upd.group_id;
+      await db.from('discussion_group_suggestions').update(upd).eq('id', suggestId);
+    }
+  }
+  showToast(_zgEditId ? 'Đã cập nhật nhóm' : (suggestId ? 'Đã mở nhóm từ đề xuất' : 'Đã tạo nhóm trao đổi'));
+  resetZgForm();
+  renderZaloGroupsAdmin();
+});
+
+document.getElementById('zgPendingList')?.addEventListener('click', async e => {
+  const open = e.target.closest('[data-zg-open]');
+  const reject = e.target.closest('[data-zg-reject]');
+  if (open) {
+    const { data: s } = await db.from('discussion_group_suggestions').select('*').eq('id', open.dataset.zgOpen).maybeSingle();
+    if (!s) return;
+    zgFillFromSuggest(s);
+    return;
+  }
+  if (reject) {
+    const note = window.prompt('Lý do từ chối (tuỳ chọn):') || '';
+    await db.from('discussion_group_suggestions').update({
+      status: 'rejected',
+      admin_note: note || 'Chưa phù hợp lúc này',
+      reviewed_at: new Date().toISOString()
+    }).eq('id', reject.dataset.zgReject);
+    showToast('Đã từ chối đề xuất mở nhóm');
+    if (_zgSuggestId === Number(reject.dataset.zgReject)) resetZgForm();
+    refreshZgBadge();
+    renderZaloGroupsAdmin();
+  }
+});
+
+document.getElementById('zgAdminList')?.addEventListener('click', async e => {
+  const edit = e.target.closest('[data-zg-edit]');
+  const del = e.target.closest('[data-zg-del]');
+  const tog = e.target.closest('[data-zg-toggle]');
+  if (edit) {
+    const { data: g } = await db.from('discussion_groups').select('*').eq('id', edit.dataset.zgEdit).maybeSingle();
+    if (!g) return;
+    _zgEditId = g.id;
+    _zgSuggestId = null;
+    document.getElementById('zgFormTitle').textContent = 'Sửa nhóm';
+    document.getElementById('zgName').value = g.name || '';
+    document.getElementById('zgUrl').value = await decryptUrl(g.zalo_url);
+    document.getElementById('zgDesc').value = g.description || '';
+    document.getElementById('zgClass').value = g.class_name || '';
+    document.getElementById('zgIcon').value = g.icon || '💬';
+    document.getElementById('zgResetBtn').style.display = '';
+    renderZgIcons(g.icon || '💬');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  if (tog) {
+    const on = tog.dataset.on === '1';
+    const gid = tog.dataset.zgToggle;
+    await db.from('discussion_groups').update({ active: !on }).eq('id', gid);
+    await db.from('discussion_group_suggestions').update({
+      status: on ? 'removed' : 'approved',
+      admin_note: on ? 'Nhóm đã bị ẩn khỏi trang trao đổi.' : 'Đã hiện lại nhóm trên trang trao đổi.',
+      reviewed_at: new Date().toISOString()
+    }).eq('group_id', gid);
+    renderZaloGroupsAdmin();
+    return;
+  }
+  if (del) {
+    showConfirm('Xóa nhóm này? Học sinh sẽ không vào được nữa.', async () => {
+      const gid = del.dataset.zgDel;
+      await db.from('discussion_group_suggestions').update({
+        status: 'deleted',
+        admin_note: 'Nhóm này đã bị xóa.',
+        reviewed_at: new Date().toISOString()
+      }).eq('group_id', gid);
+      await db.from('discussion_groups').delete().eq('id', gid);
+      showToast('Đã xóa nhóm');
+      if (_zgEditId === Number(gid)) resetZgForm();
+      renderZaloGroupsAdmin();
+    }, { title: 'Xóa nhóm', icon: '💬', okText: 'Xóa' });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════
+// GÓP Ý BUỔI HỌC — ADMIN
+// ════════════════════════════════════════════════════════════════
+let _fbAdminEditId = null;
+let _fbDetailId = null;
+let _fbDetailReplies = [];
+
+const FB_PACE_A = { slow: 'Chậm', ok: 'Vừa', fast: 'Nhanh' };
+const FB_UND_A  = { low: 'Chưa rõ', ok: 'Tạm ổn', high: 'Nắm chắc' };
+
+function _fbEsc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function _fbDateA(d) {
+  if (!d) return '';
+  return new Date(d + 'T00:00:00').toLocaleDateString('vi-VN', { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+async function populateFbAdminFilters() {
+  const { data: classes } = await db.from('classes').select('name').order('name');
+  const opts = (classes || []).map(c => `<option value="${_fbEsc(c.name)}">${_fbEsc(c.name)}</option>`).join('');
+  const sel1 = document.getElementById('fbAdminFilterClass');
+  const sel2 = document.getElementById('fbAdminClass');
+  if (sel1) sel1.innerHTML = '<option value="">Tất cả lớp</option>' + opts;
+  if (sel2) sel2.innerHTML = '<option value="">-- Chọn lớp --</option>' + opts;
+  const dateEl = document.getElementById('fbAdminDate');
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+}
+
+
+async function loadFbAdminSessions() {
+  const listEl = document.getElementById('fbAdminSessionList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">⏳ Đang tải...</div>';
+  const filterClass = document.getElementById('fbAdminFilterClass')?.value || '';
+  const filterDate  = document.getElementById('fbAdminFilterDate')?.value || '';
+  let query = db.from('session_feedback').select('*').order('session_date', { ascending: false }).order('created_at', { ascending: false });
+  if (filterClass) query = query.eq('class_name', filterClass);
+  if (filterDate)  query = query.eq('session_date', filterDate);
+  const { data: sessions, error } = await query;
+  if (error) {
+    const hint = (error.message || '').includes('does not exist') || (error.message || '').includes('schema cache')
+      ? 'Chưa chạy SQL. Mở Supabase SQL Editor, chạy file supabase_session_feedback.sql rồi tải lại trang.'
+      : error.message;
+    listEl.innerHTML = `<div style="color:#ef4444;padding:1rem">${_fbEsc(hint)}</div>`;
+    return;
+  }
+  if (!sessions?.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)">Chưa có form góp ý nào.<br/><small>Nhấn "Mở góp ý buổi mới" sau mỗi buổi học.</small></div>';
+    _updateFbAdminStats([], []);
+    return;
+  }
+  const ids = sessions.map(s => s.id);
+  const { data: replies } = await db.from('session_feedback_replies').select('feedback_id').in('feedback_id', ids);
+  const recMap = {};
+  (replies || []).forEach(r => {
+    if (!recMap[r.feedback_id]) recMap[r.feedback_id] = { n: 0 };
+    recMap[r.feedback_id].n++;
+  });
+  _updateFbAdminStats(sessions, replies || []);
+  const badge = document.getElementById('fbNavBadge');
+  if (badge) {
+    const openN = sessions.filter(s => s.is_open).length;
+    badge.style.display = openN ? '' : 'none';
+    badge.textContent = openN || '';
+  }
+  listEl.innerHTML = sessions.map(s => {
+    const rec = recMap[s.id] || { n: 0 };
+    return `
+      <div class="att-session-row ${s.is_open ? 'open' : ''}">
+        <div style="width:46px;height:46px;border-radius:13px;background:${s.is_open?'#fef3c7':'var(--primary-light,#eef2ff)'};display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${s.is_open?'💡':'📋'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.3rem">
+            <span style="font-weight:800;font-size:.93rem">${_fbEsc(s.title)}</span>
+            <span class="att-pill ${s.is_open ? 'att-pill-open' : 'att-pill-closed'}">${s.is_open ? '● Đang mở' : '● Đã đóng'}</span>
+          </div>
+          <div style="font-size:.76rem;color:var(--muted);display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:.45rem">
+            <span>📅 ${_fbEsc(_fbDateA(s.session_date))}</span>
+            <span>📚 ${_fbEsc(s.class_name)}</span>
+          </div>
+          <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+            <span class="att-mini-stat" style="background:#eef2ff;color:var(--primary)">✉️ ${rec.n} góp ý</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;flex-shrink:0;align-items:center">
+          <button class="att-action-btn" style="background:linear-gradient(135deg,#78350f,#b45309);color:#fff" onclick="viewFbDetail(${s.id})">Tổng hợp</button>
+          <button class="att-action-btn" style="background:${s.is_open?'#fee2e2':'#d1fae5'};color:${s.is_open?'#b91c1c':'#15803d'}" onclick="toggleFbSession(${s.id},${!s.is_open})">${s.is_open?'Đóng':'Mở lại'}</button>
+          <button class="att-action-btn" style="background:#fef3c7;color:#92400e" onclick="editFbSession(${s.id})">Sửa</button>
+          <button class="att-action-btn" style="background:#fee2e2;color:#b91c1c" onclick="deleteFbSession(${s.id})">Xóa</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function _updateFbAdminStats(sessions, replies) {
+  const el = id => document.getElementById(id);
+  if (el('fbStatTotal'))   el('fbStatTotal').textContent = sessions.length;
+  if (el('fbStatOpen'))    el('fbStatOpen').textContent = sessions.filter(s => s.is_open).length;
+  if (el('fbStatReplies')) el('fbStatReplies').textContent = replies.length;
+}
+
+async function openFbAdminCreateModal() {
+  _fbAdminEditId = null;
+  document.getElementById('fbAdminModalTitle').textContent = 'Mở góp ý buổi học';
+  document.getElementById('fbAdminTitle').value = '';
+  document.getElementById('fbAdminClass').value = '';
+  document.getElementById('fbAdminDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fbAdminPrompt').value = 'Buổi học hôm nay thế nào? Góp ý để thầy/cô điều chỉnh buổi sau. Không ảnh hưởng điểm số.';
+  document.getElementById('fbAdminIsOpen').checked = true;
+  document.getElementById('fbAdminModalError').style.display = 'none';
+  document.getElementById('fbAdminSaveText').textContent = 'Lưu form góp ý';
+  document.getElementById('fbAdminModal').style.display = '';
+}
+
+async function editFbSession(id) {
+  const { data: s, error } = await db.from('session_feedback').select('*').eq('id', id).single();
+  if (error || !s) { showToast('Không tải được buổi', false); return; }
+  _fbAdminEditId = s.id;
+  document.getElementById('fbAdminModalTitle').textContent = 'Sửa form góp ý';
+  document.getElementById('fbAdminTitle').value = s.title || '';
+  document.getElementById('fbAdminClass').value = s.class_name || '';
+  document.getElementById('fbAdminDate').value = s.session_date || '';
+  document.getElementById('fbAdminPrompt').value = s.prompt || '';
+  document.getElementById('fbAdminIsOpen').checked = s.is_open !== false;
+  document.getElementById('fbAdminModalError').style.display = 'none';
+  document.getElementById('fbAdminSaveText').textContent = 'Cập nhật';
+  document.getElementById('fbAdminModal').style.display = '';
+}
+
+async function saveFbAdminSession() {
+  const title = document.getElementById('fbAdminTitle').value.trim();
+  const cls   = document.getElementById('fbAdminClass').value;
+  const date  = document.getElementById('fbAdminDate').value;
+  const prompt = document.getElementById('fbAdminPrompt').value.trim();
+  const isOpen = document.getElementById('fbAdminIsOpen').checked;
+  const errEl = document.getElementById('fbAdminModalError');
+  if (!title) { errEl.textContent = 'Nhập tiêu đề'; errEl.style.display = ''; return; }
+  if (!cls)   { errEl.textContent = 'Chọn lớp';     errEl.style.display = ''; return; }
+  if (!date)  { errEl.textContent = 'Chọn ngày';    errEl.style.display = ''; return; }
+  errEl.style.display = 'none';
+  const btn = document.getElementById('fbAdminSaveText');
+  btn.textContent = 'Đang lưu...';
+  const payload = {
+    title, class_name: cls, session_date: date,
+    prompt: prompt || null,
+    is_open: isOpen,
+    created_by: sessionStorage.getItem('dh_user') || 'admin'
+  };
+  let error;
+  if (_fbAdminEditId) {
+    ({ error } = await db.from('session_feedback').update(payload).eq('id', _fbAdminEditId));
+  } else {
+    ({ error } = await db.from('session_feedback').insert(payload));
+  }
+  if (error) { errEl.textContent = 'Lỗi: ' + error.message; errEl.style.display = ''; btn.textContent = 'Lưu form góp ý'; return; }
+  document.getElementById('fbAdminModal').style.display = 'none';
+  showToast(_fbAdminEditId ? 'Đã cập nhật form góp ý' : 'Đã mở form góp ý — học viên thấy trên trang Góp ý');
+  loadFbAdminSessions();
+}
+
+async function toggleFbSession(id, isOpen) {
+  const { error } = await db.from('session_feedback').update({ is_open: isOpen }).eq('id', id);
+  if (error) { showToast(error.message, false); return; }
+  showToast(isOpen ? 'Đã mở lại góp ý' : 'Đã đóng góp ý');
+  loadFbAdminSessions();
+}
+
+async function deleteFbSession(id) {
+  showConfirm('Xóa form này? Toàn bộ góp ý của học viên cũng sẽ mất.', async () => {
+    const { error } = await db.from('session_feedback').delete().eq('id', id);
+    if (error) { showToast(error.message, false); return; }
+    showToast('Đã xóa form góp ý');
+    loadFbAdminSessions();
+  }, { title: 'Xóa góp ý', icon: '💡', okText: 'Xóa' });
+}
+
+function _fbBar(label, n, total, color) {
+  const pct = total ? Math.round(n / total * 100) : 0;
+  return `<div style="margin-bottom:.45rem">
+    <div style="display:flex;justify-content:space-between;font-size:.75rem;font-weight:700;margin-bottom:.2rem"><span>${label}</span><span>${n} (${pct}%)</span></div>
+    <div style="height:8px;background:var(--bg);border-radius:99px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:99px"></div></div>
+  </div>`;
+}
+
+async function viewFbDetail(id) {
+  _fbDetailId = id;
+  document.getElementById('fbDetailTitle').textContent = 'Đang tải...';
+  document.getElementById('fbDetailSub').textContent = '';
+  document.getElementById('fbDetailStats').innerHTML = '';
+  document.getElementById('fbDetailBars').innerHTML = '';
+  document.getElementById('fbDetailList').innerHTML = '';
+  document.getElementById('fbDetailMissing').textContent = '';
+  document.getElementById('fbDetailModal').style.display = '';
+
+  const { data: s } = await db.from('session_feedback').select('*').eq('id', id).single();
+  if (!s) { document.getElementById('fbDetailTitle').textContent = 'Không tìm thấy'; return; }
+  document.getElementById('fbDetailTitle').textContent = s.title;
+  document.getElementById('fbDetailSub').textContent = `${_fbDateA(s.session_date)} · ${s.class_name}`;
+  document.getElementById('fbAdminNote').value = s.admin_note || '';
+
+  const { data: replies } = await db.from('session_feedback_replies').select('*').eq('feedback_id', id).order('created_at', { ascending: false });
+  _fbDetailReplies = replies || [];
+  const n = _fbDetailReplies.length;
+  const paceN = { slow: 0, ok: 0, fast: 0 };
+  const undN  = { low: 0, ok: 0, high: 0 };
+  _fbDetailReplies.forEach(r => {
+    if (paceN[r.pace] != null) paceN[r.pace]++;
+    if (undN[r.understood] != null) undN[r.understood]++;
+  });
+
+  const { count: classCount } = await db.from('student_classes').select('student_id', { count: 'exact', head: true }).eq('class_name', s.class_name);
+  const totalHs = classCount || 0;
+  const pct = totalHs ? Math.round(n / totalHs * 100) : 0;
+
+  const cell = (v, l) => `<div style="padding:.85rem 1rem;text-align:center;border-right:1px solid var(--border)"><div style="font-size:1.25rem;font-weight:900">${v}</div><div style="font-size:.68rem;color:var(--muted);font-weight:700;margin-top:.15rem">${l}</div></div>`;
+  document.getElementById('fbDetailStats').innerHTML =
+    cell(n, 'Đã gửi') + cell(totalHs || '—', 'Sĩ số lớp') + cell((totalHs ? pct : '—') + (totalHs ? '%' : ''), 'Tỷ lệ phản hồi');
+
+  document.getElementById('fbDetailBars').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">
+      <div>
+        <div style="font-size:.78rem;font-weight:800;margin-bottom:.5rem">Tốc độ giảng</div>
+        ${_fbBar('Chậm — cần nhanh hơn', paceN.slow, n, '#6366f1')}
+        ${_fbBar('Vừa phải', paceN.ok, n, '#10b981')}
+        ${_fbBar('Nhanh — cần chậm lại', paceN.fast, n, '#f59e0b')}
+      </div>
+      <div>
+        <div style="font-size:.78rem;font-weight:800;margin-bottom:.5rem">Mức nắm bài</div>
+        ${_fbBar('Chưa rõ', undN.low, n, '#ef4444')}
+        ${_fbBar('Tạm ổn', undN.ok, n, '#f59e0b')}
+        ${_fbBar('Nắm chắc', undN.high, n, '#10b981')}
+      </div>
+    </div>`;
+
+  if (!_fbDetailReplies.length) {
+    document.getElementById('fbDetailList').innerHTML = '<div style="color:var(--muted);padding:.75rem 0">Chưa có góp ý nào.</div>';
+  } else {
+    document.getElementById('fbDetailList').innerHTML = _fbDetailReplies.map(r => `
+      <div style="border:1.5px solid var(--border);border-radius:12px;padding:.85rem 1rem;margin-bottom:.55rem">
+        <div style="display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin-bottom:.35rem">
+          <b style="font-size:.88rem">${_fbEsc(r.student_name || r.username)}</b>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem">Tempo: ${FB_PACE_A[r.pace]||'—'} · Hiểu: ${FB_UND_A[r.understood]||'—'} · ${r.created_at ? new Date(r.created_at).toLocaleString('vi-VN') : ''}</div>
+        ${r.want_review ? `<div style="font-size:.8rem;margin-bottom:.3rem"><b>Ôn lại:</b> ${_fbEsc(r.want_review)}</div>` : ''}
+        <div style="font-size:.85rem;line-height:1.6">${_fbEsc(r.comment)}</div>
+      </div>`).join('');
+  }
+
+  const repliedUsers = new Set(_fbDetailReplies.map(r => (r.username || '').toLowerCase()));
+  const { data: sc } = await db.from('student_classes').select('student_id').eq('class_name', s.class_name);
+  const ids = [...new Set((sc || []).map(x => x.student_id))];
+  let missing = [];
+  if (ids.length) {
+    const { data: sts } = await db.from('students').select('username,full_name').in('id', ids);
+    missing = (sts || []).filter(st => !repliedUsers.has((st.username || '').toLowerCase()));
+  }
+  document.getElementById('fbDetailMissing').innerHTML = missing.length
+    ? missing.map(st => `<span style="display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.2rem .55rem;margin:.15rem .2rem 0 0;font-size:.78rem">${_fbEsc(st.full_name || st.username)}</span>`).join('')
+    : (n ? 'Mọi học viên trong lớp đã gửi (theo danh sách lớp).' : 'Chưa có ai gửi.');
+}
+
+async function saveFbAdminNote() {
+  if (!_fbDetailId) return;
+  const note = document.getElementById('fbAdminNote').value.trim();
+  const { error } = await db.from('session_feedback').update({ admin_note: note || null }).eq('id', _fbDetailId);
+  if (error) { showToast(error.message, false); return; }
+  showToast('Đã lưu ghi chú điều chỉnh buổi sau');
+}
+
+function exportFbCSV() {
+  if (!_fbDetailReplies.length) { showToast('Chưa có góp ý để xuất', false); return; }
+  const rows = [['Họ tên', 'Tài khoản', 'Tốc độ', 'Nắm bài', 'Ôn lại', 'Góp ý', 'Thời gian']];
+  _fbDetailReplies.forEach(r => rows.push([
+    r.student_name || '', r.username || '',
+    FB_PACE_A[r.pace] || r.pace || '', FB_UND_A[r.understood] || r.understood || '',
+    r.want_review || '', (r.comment || '').replace(/"/g, '""'),
+    r.created_at ? new Date(r.created_at).toLocaleString('vi-VN') : ''
+  ]));
+  const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `gop_y_${_fbDetailId}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+
+// ════════════════════════════════════════════════════════════════

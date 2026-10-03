@@ -76,6 +76,7 @@ create table if not exists lesson_videos (
 
 -- Migration nếu bảng đã tồn tại:
 -- alter table lesson_videos add column if not exists video_url text default null;
+-- alter table lesson_videos add column if not exists allow_download boolean default false;
 
 -- Bảng tài liệu trong bài học
 create table if not exists lesson_docs (
@@ -91,6 +92,7 @@ create table if not exists lesson_docs (
 
 -- Migration nếu bảng đã tồn tại:
 -- alter table lesson_docs add column if not exists doc_url text default null;
+-- alter table lesson_docs add column if not exists allow_download boolean default true;
 
 -- Bảng cảnh báo
 create table if not exists alerts (
@@ -207,6 +209,27 @@ create table if not exists lesson_favorites (
   unique(username, lesson_id)
 );
 alter table lesson_favorites disable row level security;
+
+-- ============================================================
+-- Bảng tiến độ bài học (đã học / đang học)
+-- ============================================================
+create table if not exists lesson_progress (
+  id             bigint generated always as identity primary key,
+  username       text not null,
+  lesson_id      bigint not null references lessons(id) on delete cascade,
+  status         text not null default 'in_progress',
+  last_opened_at timestamptz default now(),
+  completed_at   timestamptz,
+  unique(username, lesson_id)
+);
+alter table lesson_progress add column if not exists status         text default 'in_progress';
+alter table lesson_progress add column if not exists last_opened_at timestamptz default now();
+alter table lesson_progress add column if not exists completed_at   timestamptz;
+alter table lesson_progress disable row level security;
+create unique index if not exists lesson_progress_username_lesson_id_key
+  on lesson_progress(username, lesson_id);
+create index if not exists idx_lp_user on lesson_progress(username);
+create index if not exists idx_lp_user_opened on lesson_progress(username, last_opened_at desc);
 
 -- ============================================================
 -- Bảng đánh dấu thông báo đã đọc

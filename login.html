@@ -5,7 +5,7 @@
   <meta name="google-site-verification" content="sYwxmM0uBuqYK-IhlY67eC_hitCqZFuu1DtAPymm23I" />
   <meta name="google-site-verification" content="Un3Zp4tzRt7qqijCXILZhhfbUwkmyVy-c-WXz6eUGBM" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Đăng Nhập - DHDT LMS v1.4.9</title>
+  <title>Đăng Nhập - DHDT LMS v1.5.0</title>
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
     script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://www.tiktok.com;
@@ -25,643 +25,529 @@
   <meta http-equiv="Referrer-Policy" content="no-referrer"/>
   <link rel="icon" type="image/png" href="icons/icon-192.png"/>
   <link rel="apple-touch-icon" href="icons/icon-192.png"/>
-  <link rel="stylesheet" href="style.css"/>
   <link rel="manifest" href="manifest.json"/>
-  <meta name="theme-color" content="#4f46e5"/>
+  <meta name="theme-color" content="#0f172a"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
-  <meta name="apple-mobile-web-app-title" content="Duy Ho�ng DTCT"/>
-
+  <meta name="apple-mobile-web-app-title" content="Duy Hoàng DTCT"/>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-</head>
-<body class="auth-page" style="margin:0;padding:0;min-height:100vh;display:flex;flex-direction:column;">
-
-
-
-  <!-- Auth Wrap Styles -->
+  <script src="config.js"></script>
   <style>
-    /* ══ LAYOUT ══ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    #guideModal[hidden] { display: none !important; }
 
-    /* ══ LEFT PANEL ══ */
-    .auth-left {
-      flex: 0 0 52%;
-      min-width: 0;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      background: linear-gradient(145deg, #0d0b2a 0%, #1a1848 40%, #2d2b6b 100%);
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 2.5rem 2rem;
-      overflow: hidden;
-      text-align: center;
-      box-sizing: border-box;
-    }    /* Orbs */
-    .auth-orb { position:absolute; border-radius:50%; pointer-events:none; }
-    .auth-orb-1 { top:-80px;right:-80px;width:320px;height:320px;background:radial-gradient(circle,rgba(99,102,241,.25) 0%,transparent 70%);animation:orbFloat 9s ease-in-out infinite; }
-    .auth-orb-2 { bottom:-60px;left:-60px;width:240px;height:240px;background:radial-gradient(circle,rgba(6,182,212,.2) 0%,transparent 70%);animation:orbFloat 11s ease-in-out infinite reverse; }
-    .auth-orb-3 { top:35%;right:5%;width:130px;height:130px;background:radial-gradient(circle,rgba(165,180,252,.15) 0%,transparent 70%);animation:orbFloat 7s ease-in-out infinite 1.5s; }
-    .auth-orb-4 { top:60%;left:3%;width:90px;height:90px;background:radial-gradient(circle,rgba(6,182,212,.18) 0%,transparent 70%);animation:orbFloat 8s ease-in-out infinite 3s; }
-    .auth-orb-5 { top:15%;left:10%;width:60px;height:60px;background:radial-gradient(circle,rgba(236,72,153,.13) 0%,transparent 70%);animation:orbFloat 10s ease-in-out infinite 2s; }
-    @keyframes orbFloat { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(10px,-15px) scale(1.05)} 66%{transform:translate(-8px,8px) scale(.97)} }
-
-    /* Dots */
-    .auth-dot { position:absolute; border-radius:50%; pointer-events:none; animation:dotTwinkle 3.5s ease-in-out infinite; }
-    @keyframes dotTwinkle { 0%,100%{opacity:.2;transform:scale(1)} 50%{opacity:.9;transform:scale(1.8)} }
-
-    /* Inner */
-    .auth-left-inner { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; width:100%; max-width:420px; }
-
-    /* Logo */
-    .auth-logo-wrap { width:80px; height:80px; border-radius:20px; overflow:hidden; margin:0 auto .85rem; box-shadow:0 16px 40px rgba(0,0,0,.55),0 0 0 2.5px rgba(255,255,255,.14); animation:logoBounce .65s cubic-bezier(.34,1.56,.64,1) both; }
-    .auth-logo-wrap img { width:100%; height:100%; object-fit:cover; }
-    @keyframes logoBounce { from{opacity:0;transform:scale(.6) translateY(14px)} to{opacity:1;transform:scale(1) translateY(0)} }
-    @keyframes slideUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-
-    /* Texts */
-    .auth-sys-name { font-size:1.6rem; font-weight:900; letter-spacing:-.5px; line-height:1.2; margin-bottom:.3rem; animation:slideUp .6s ease .1s both; }
-    .auth-sys-tag  { font-size:.82rem; opacity:.7; font-weight:500; margin-bottom:1.25rem; animation:slideUp .6s ease .18s both; }
-    .auth-headline { font-size:1.85rem; font-weight:900; line-height:1.25; letter-spacing:-.4px; margin-bottom:.55rem; animation:slideUp .6s ease .26s both; }
-    .auth-headline .hl-accent { color:#a5b4fc; }
-    .auth-subtext  { font-size:.84rem; opacity:.75; line-height:1.75; margin-bottom:1.1rem; max-width:340px; animation:slideUp .6s ease .34s both; }
-
-    /* Stats */
-    .auth-stats { display:flex; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:16px; overflow:hidden; width:100%; max-width:340px; margin-bottom:1.1rem; animation:slideUp .6s ease .42s both; }
-    .auth-stat-item { flex:1; padding:.7rem .5rem; text-align:center; position:relative; }
-    .auth-stat-item+.auth-stat-item::before { content:''; position:absolute; left:0; top:18%; bottom:18%; width:1px; background:rgba(255,255,255,.15); }
-    .auth-stat-val { font-size:1.3rem; font-weight:900; line-height:1; }
-    .auth-stat-lbl { font-size:.67rem; opacity:.62; margin-top:.25rem; line-height:1.35; }
-
-    /* Feature cards */
-    .auth-features { display:flex; flex-direction:column; gap:.45rem; width:100%; max-width:380px; animation:slideUp .6s ease .5s both; }
-    .auth-feat-card { display:flex; align-items:center; gap:.75rem; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.11); border-radius:14px; padding:.65rem 1rem; transition:background .2s,border-color .2s; }
-    .auth-feat-card:first-child { background:rgba(10,8,40,.7); border-color:rgba(148,163,184,.28); box-shadow:0 6px 20px rgba(0,0,0,.3); }
-    .auth-feat-card:hover { background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.2); }
-    .auth-feat-icon { font-size:1.1rem; flex-shrink:0; width:38px; height:38px; background:rgba(255,255,255,.12); border-radius:10px; display:flex; align-items:center; justify-content:center; }
-    .auth-feat-title { font-weight:700; font-size:.84rem; margin-bottom:.1rem; }
-    .auth-feat-sub   { font-size:.71rem; opacity:.62; }
-
-    /* Version */
-    .auth-version { margin-top:1rem; animation:slideUp .6s ease .58s both; }
-    .auth-version span { background:rgba(255,255,255,.1); color:rgba(255,255,255,.5); font-size:.69rem; font-weight:700; padding:.24rem .7rem; border-radius:20px; letter-spacing:.5px; }
-
-    /* ══ RIGHT PANEL ══ */
-    .auth-right {
-      flex: 0 0 48%;
-      min-width: 0;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem 2rem;
-      background: linear-gradient(160deg, #eef2ff 0%, #f0f4ff 60%, #e8eeff 100%);
-      box-sizing: border-box;
-      overflow-y: auto;
-      scrollbar-width: none;
+    :root {
+      --bg: #0f172a;
+      --bg2: #1e293b;
+      --border: rgba(255,255,255,.1);
+      --text: #f1f5f9;
+      --text-2: #94a3b8;
+      --text-3: #64748b;
+      --accent: #3b82f6;
+      --accent-2: #2563eb;
+      --orange: #f97316;
+      --red: #ef4444;
+      --font: 'Be Vietnam Pro', system-ui, sans-serif;
     }
-    .auth-right::-webkit-scrollbar { display: none; }
 
-    .auth-box {
-      background: #fff;
-      border-radius: 28px;
-      padding: 1.75rem 2rem 1.5rem;
+    html {
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent) var(--bg2);
+    }
+    html::-webkit-scrollbar { width: 6px; }
+    html::-webkit-scrollbar-track { background: var(--bg2); }
+    html::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 1.5rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: .28;
+    }
+    .orb-a { width: 420px; height: 420px; background: #3b82f6; top: -80px; right: -80px; }
+    .orb-b { width: 320px; height: 320px; background: #f97316; bottom: -60px; left: -80px; }
+
+    /* ── LOGIN CARD ── */
+    .login-wrap {
+      position: relative;
+      z-index: 1;
       width: 100%;
-      max-width: 390px;
-      box-shadow: 0 20px 60px rgba(99,102,241,.15), 0 4px 16px rgba(0,0,0,.06), inset 0 1px 0 rgba(255,255,255,.95);
-      border: 1px solid rgba(99,102,241,.1);
+      max-width: 440px;
+      animation: cardIn .5s ease both;
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(20px) scale(.98); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .login-card {
+      background: rgba(30, 41, 59, .85);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2.25rem 2rem 2rem;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 24px 60px rgba(0,0,0,.4);
+    }
+
+    /* Back link */
+    .back-home {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--text-2);
+      margin-bottom: 1.5rem;
+      transition: color .2s;
+    }
+    .back-home:hover { color: var(--text); }
+
+    /* Device tip */
+    .device-tip {
+      display: none;
+      margin-bottom: 1rem;
+      padding: .6rem .85rem;
+      border-radius: 10px;
+      background: rgba(249,115,22,.12);
+      border: 1px solid rgba(249,115,22,.25);
+      font-size: .78rem;
+      color: #fed7aa;
+      line-height: 1.5;
+    }
+
+    /* Brand */
+    .brand { text-align: center; margin-bottom: 1.75rem; }
+    .logo {
+      width: 64px; height: 64px;
+      border-radius: 14px;
+      margin: 0 auto 1rem;
+      overflow: hidden;
+      border: 1px solid rgba(59,130,246,.4);
+      box-shadow: 0 0 0 4px rgba(59,130,246,.1), 0 8px 24px rgba(0,0,0,.3);
+    }
+    .logo img { width: 100%; height: 100%; object-fit: cover; }
+    .brand h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      color: var(--text);
+      margin-bottom: .3rem;
+    }
+    .tagline { font-size: .85rem; color: var(--text-2); }
+    .ver-pill {
+      display: inline-block;
+      margin-top: .55rem;
+      font-size: .72rem;
+      font-weight: 700;
+      color: #60a5fa;
+      background: rgba(59,130,246,.12);
+      border: 1px solid rgba(59,130,246,.25);
+      padding: .2rem .6rem;
+      border-radius: 999px;
+    }
+
+    /* Form */
+    .form { display: flex; flex-direction: column; gap: 1rem; }
+    .field { display: flex; flex-direction: column; gap: .45rem; }
+    .label {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+    .input-wrap {
       display: flex;
-      flex-direction: column;
-      gap: .65rem;
-      animation: boxIn .55s cubic-bezier(.22,1,.36,1) both;
+      align-items: center;
+      gap: .6rem;
+      padding: 0 14px;
+      height: 48px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.06);
+      border: 1.5px solid rgba(255,255,255,.12);
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .input-wrap:focus-within {
+      border-color: rgba(59,130,246,.6);
+      box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+    }
+    .field-error .input-wrap {
+      border-color: rgba(239,68,68,.6);
+      box-shadow: 0 0 0 3px rgba(239,68,68,.1);
+      animation: shake .35s ease;
+    }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+    .ico {
+      width: 17px; height: 17px;
+      stroke: var(--text-3);
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    .input-wrap input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: .93rem;
+      color: var(--text);
+      font-family: inherit;
+      min-width: 0;
+    }
+    .input-wrap input::placeholder { color: var(--text-3); }
+    .eye {
+      border: none;
+      background: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--text-3);
+      display: grid;
+      place-items: center;
+      transition: color .2s;
+    }
+    .eye:hover { color: var(--text-2); }
+    .eye svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+    .hint {
+      font-size: .78rem;
+      color: #fbbf24;
+      padding: .5rem .75rem;
+      border-radius: 8px;
+      background: rgba(245,158,11,.1);
+      border: 1px solid rgba(245,158,11,.2);
     }
 
-    /* ══ WRAP ══ */
-    .auth-wrap { display:flex; width:100%; flex:1; min-height:100vh; min-width:0; }
-    @keyframes boxIn { from{opacity:0;transform:translateY(20px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+    .row-between {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+      flex-wrap: wrap;
+    }
+    .remember {
+      display: inline-flex;
+      align-items: center;
+      gap: .55rem;
+      font-size: .85rem;
+      color: var(--text-2);
+      cursor: pointer;
+      user-select: none;
+    }
+    .remember input { width: 15px; height: 15px; accent-color: var(--accent); }
+    .link {
+      color: #60a5fa;
+      font-size: .85rem;
+      font-weight: 600;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      font-family: inherit;
+      transition: color .2s;
+    }
+    .link:hover { color: var(--text); }
 
-    /* ══ MOBILE ══ */
-    #mobileAuthHeader { display:none; }
-    @media (max-width:768px) {
-      #mobileAuthHeader { display:block !important; }
-      .auth-left  { display:none !important; }
-      .auth-right { flex:1; height:auto; position:static; padding:1.25rem 1rem 2rem; background:#f0f4ff; }
-      .auth-box   { padding:1.75rem 1.25rem 1.5rem; border-radius:20px; }
+    /* Submit button */
+    .btn-login {
+      height: 50px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      color: #fff;
+      font-weight: 700;
+      font-size: .97rem;
+      font-family: inherit;
+      background: var(--accent);
+      box-shadow: 0 4px 20px rgba(59,130,246,.4);
+      transition: background .2s, transform .15s, box-shadow .2s, filter .2s;
+      position: relative;
+      overflow: hidden;
+      margin-top: .25rem;
+    }
+    .btn-login:hover {
+      background: var(--accent-2);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 28px rgba(59,130,246,.5);
+    }
+    .btn-login:active { transform: scale(.98); }
+    .btn-login.loading { pointer-events: none; filter: saturate(.8); }
+    .btn-login.loading #loginBtnText { visibility: hidden; }
+    #loginBtnLoader {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      color: #fff;
+      font-weight: 700;
+    }
+    .btn-login.loading #loginBtnLoader { display: flex !important; }
+
+    .legal {
+      text-align: center;
+      font-size: .75rem;
+      color: var(--text-3);
+      line-height: 1.55;
     }
 
-    /* ══ SHARED KEYFRAMES ══ */
-    @keyframes mobileOrb1    { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(15px,-15px) scale(1.1)} }
-    @keyframes mobileOrb2    { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-10px,12px) scale(1.08)} }
-    @keyframes twinkle        { 0%,100%{opacity:.3;transform:scale(1)} 50%{opacity:1;transform:scale(1.5)} }
-    @keyframes logoPop        { from{opacity:0;transform:scale(.7)} to{opacity:1;transform:scale(1)} }
-    @keyframes spin           { to{transform:rotate(360deg)} }
-    @keyframes gradientShift  { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
-    @keyframes authSlideLeft  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-    @keyframes floatShape     { 0%,100%{transform:translate(0,0)} 50%{transform:translate(10px,-12px)} }
+    #loginError {
+      color: #fca5a5;
+      font-size: .82rem;
+      min-height: 1rem;
+      font-weight: 600;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: space-between;
+      gap: .75rem;
+      flex-wrap: wrap;
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      padding: .75rem 1.1rem;
+      border-radius: 12px;
+      background: var(--bg2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: 0 12px 32px rgba(0,0,0,.4);
+      font-size: .88rem;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s ease, transform .3s ease;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      body { padding: 1rem .75rem; align-items: flex-start; padding-top: max(1.5rem, env(safe-area-inset-top)); }
+      .login-card { padding: 1.75rem 1.35rem 1.5rem; border-radius: 16px; }
+      .brand h1 { font-size: 1.3rem; }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes policyPopIn {
+      from { opacity: 0; transform: translateY(28px) scale(.96); }
+      to   { opacity: 1; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
   </style>
+</head>
+<body>
+  <div class="orb orb-a" aria-hidden="true"></div>
+  <div class="orb orb-b" aria-hidden="true"></div>
 
-  <div class="auth-wrap" style="flex:1">
+  <div class="login-wrap">
+    <div class="login-card" role="main" aria-label="Đăng nhập">
 
-    <!-- MOBILE HEADER (chỉ hiện trên điện thoại) -->
-    <div id="mobileAuthHeader">
-      <div style="text-align:center;padding:2.25rem 1rem 1.25rem;color:#fff;background:linear-gradient(145deg,#0f0c29,#1a1a4e,#302b63);position:relative;overflow:hidden">
-        <!-- Orb decorations -->
-        <div style="position:absolute;top:-40px;left:-40px;width:160px;height:160px;background:rgba(139,92,246,.12);border-radius:50%;animation:mobileOrb1 6s ease-in-out infinite;pointer-events:none"></div>
-        <div style="position:absolute;top:0;right:-30px;width:100px;height:100px;background:rgba(6,182,212,.1);border-radius:50%;animation:mobileOrb2 8s ease-in-out infinite;pointer-events:none"></div>
-        <div style="position:absolute;bottom:-20px;left:30%;width:70px;height:70px;background:rgba(99,102,241,.1);border-radius:50%;animation:mobileOrb1 7s ease-in-out infinite 2s;pointer-events:none"></div>
-        <!-- Dots -->
-        <div style="position:absolute;top:20%;left:10%;width:4px;height:4px;background:rgba(165,180,252,.6);border-radius:50%;animation:twinkle 3s ease-in-out infinite"></div>
-        <div style="position:absolute;top:40%;right:15%;width:3px;height:3px;background:rgba(6,182,212,.7);border-radius:50%;animation:twinkle 4s ease-in-out infinite 1s"></div>
-        <div style="position:absolute;top:70%;left:20%;width:3px;height:3px;background:rgba(236,72,153,.5);border-radius:50%;animation:twinkle 3.5s ease-in-out infinite .5s"></div>
-        <div style="position:absolute;top:15%;right:25%;width:5px;height:5px;background:rgba(139,92,246,.5);border-radius:50%;animation:twinkle 5s ease-in-out infinite 2s"></div>
-        <!-- Content -->
-        <div style="position:relative;z-index:1">
-          <div style="width:80px;height:80px;border-radius:22px;overflow:hidden;margin:0 auto .8rem;box-shadow:0 8px 24px rgba(0,0,0,.4),0 0 0 2px rgba(255,255,255,.15);animation:logoPop .6s cubic-bezier(.34,1.56,.64,1) both">
-            <img src="icons/icon-192.png" style="width:100%;height:100%;object-fit:cover" alt="Logo"/>
-          </div>
-          <div style="font-weight:900;font-size:1.3rem;letter-spacing:-.4px;text-shadow:0 2px 12px rgba(0,0,0,.4)">DHDT LMS</div>
-          <div style="display:inline-flex;align-items:center;gap:.4rem;margin-top:.4rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:.2rem .75rem;font-size:.75rem;letter-spacing:.8px;opacity:.8">
-            <span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block"></span>
-            SMART LEARNING PLATFORM
-          </div>
-        </div>
+      <a href="index.html" class="back-home" title="Quay về trang chủ">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        Trang chủ
+      </a>
+
+      <div id="deviceTipBanner" class="device-tip">
+        <span>Dùng <b>laptop hoặc tablet</b> để học hiệu quả hơn.</span>
       </div>
-    </div>
+      <script>if(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)){document.getElementById('deviceTipBanner').style.display='block';}</script>
 
-    <!-- LEFT PANEL -->
-    <div class="auth-left">
-      <!-- Canvas particles -->
-      <canvas id="authCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0"></canvas>
-
-      <!-- Floating orbs -->
-      <div class="auth-orb auth-orb-1"></div>
-      <div class="auth-orb auth-orb-2"></div>
-      <div class="auth-orb auth-orb-3"></div>
-      <div class="auth-orb auth-orb-4"></div>
-      <div class="auth-orb auth-orb-5"></div>
-
-      <!-- Dot particles -->
-      <div class="auth-dot" style="top:22%;left:8%;width:4px;height:4px;background:rgba(165,180,252,.7);animation-delay:.4s"></div>
-      <div class="auth-dot" style="top:55%;right:10%;width:3px;height:3px;background:rgba(6,182,212,.8);animation-delay:1.2s"></div>
-      <div class="auth-dot" style="top:72%;left:18%;width:3px;height:3px;background:rgba(236,72,153,.6);animation-delay:.9s"></div>
-      <div class="auth-dot" style="top:15%;right:22%;width:5px;height:5px;background:rgba(139,92,246,.6);animation-delay:2s"></div>
-      <div class="auth-dot" style="top:80%;right:30%;width:4px;height:4px;background:rgba(165,180,252,.5);animation-delay:1.6s"></div>
-
-      <!-- Inner content -->
-      <div class="auth-left-inner">
-
-        <!-- Logo -->
-        <div style="width:100px;height:100px;border-radius:20px;overflow:hidden;margin:0 auto .85rem;box-shadow:0 16px 40px rgba(0,0,0,.55),0 0 0 2.5px rgba(255,255,255,.14);">
-          <img src="icons/icon-192.png" style="width:100%;height:100%;object-fit:cover;display:block;" alt="Logo DHDT LMS"/>
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <img src="icons/icon-192.png" alt="DHDT"/>
         </div>
-
-        <div class="auth-sys-name">DHDT LMS</div>
-        <div class="auth-sys-tag">Nền tảng học Toán &amp; luyện thi thông minh</div>
-
-        <!-- Headline -->
-        <h1 class="auth-headline">
-          Học thông minh,<br/>chinh phục mục tiêu <span class="hl-accent">đại học</span>
-        </h1>
-        <p class="auth-subtext">
-          Lộ trình Toán &amp; luyện đề được thiết kế riêng cho từng lớp, video HD rõ nét, tài liệu chọn lọc — giúp bạn tập trung học phần quan trọng nhất.
-        </p>
-
-        <!-- Stats bar -->
-        <div class="auth-stats">
-          <div class="auth-stat-item">
-            <div class="auth-stat-val">HD</div>
-            <div class="auth-stat-lbl">Video bài giảng<br/>rõ nét</div>
-          </div>
-          <div class="auth-stat-item">
-            <div class="auth-stat-val">24/7</div>
-            <div class="auth-stat-lbl">Chủ động<br/>thời gian học</div>
-          </div>
-          <div class="auth-stat-item">
-            <div class="auth-stat-val">🔒</div>
-            <div class="auth-stat-lbl">Không quảng cáo<br/>không phân tán</div>
-          </div>
-        </div>
-
-        <!-- Feature cards -->
-        <div class="auth-features">
-          <div class="auth-feat-card">
-            <div class="auth-feat-icon">🎬</div>
-            <div>
-              <div class="auth-feat-title">Video bài giảng HD theo từng chuyên đề</div>
-              <div class="auth-feat-sub">Giải thích chậm rãi, dễ hiểu, bám sát đề thi</div>
-            </div>
-          </div>
-          <div class="auth-feat-card">
-            <div class="auth-feat-icon">📄</div>
-            <div>
-              <div class="auth-feat-title">Tài liệu luyện thi chọn lọc</div>
-              <div class="auth-feat-sub">Phân loại mức độ: cơ bản → vận dụng cao</div>
-            </div>
-          </div>
-          <div class="auth-feat-card">
-            <div class="auth-feat-icon">🏆</div>
-            <div>
-              <div class="auth-feat-title">Lộ trình &amp; bảng điểm cá nhân</div>
-              <div class="auth-feat-sub">Theo dõi tiến độ, streak và huy chương của riêng bạn</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Version -->
-        <div class="auth-version">
-          <span>v1.4.9</span>
-        </div>
-
+        <h1>Chào mừng trở lại</h1>
+        <p class="tagline">Hệ thống học tập DHDT LMS</p>
+        <span class="ver-pill">v1.5.0</span>
       </div>
-    </div>
 
-    <!-- RIGHT PANEL -->
-    <div class="auth-right">
-      <div class="auth-box">
+      <form class="form" id="loginForm">
+        <label class="field" for="usernameInput">
+          <span class="label">Tài khoản</span>
+          <span class="input-wrap">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input type="text" id="usernameInput" name="account" autocomplete="username" placeholder="Gmail hoặc tên đăng nhập" required/>
+          </span>
+        </label>
 
-        <!-- Banner gợi ý laptop/tablet (chỉ hiện trên mobile) -->
-        <div id="deviceTipBanner" style="display:none;background:rgba(219,234,254,.9);border:1.5px solid #93c5fd;border-radius:12px;padding:.65rem 1rem;font-size:.82rem;color:#1e40af;line-height:1.6;align-items:center;gap:.65rem">
-          <span style="font-size:1.1rem;flex-shrink:0">💻</span>
-          <span>Dùng <b>laptop hoặc tablet</b> để học hiệu quả hơn.</span>
-        </div>
-        <script>if(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)){document.getElementById('deviceTipBanner').style.display='flex';}</script>
+        <label class="field" for="passwordInput">
+          <span class="label">Mật khẩu</span>
+          <span class="input-wrap">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input id="passwordInput" type="password" name="password" autocomplete="current-password" placeholder="Nhập mật khẩu" required/>
+          </span>
+        </label>
 
-        <!-- Header: logo nhỏ + badge online + title -->
-        <div style="text-align:center">
-          <div style="position:relative;display:inline-block;margin-bottom:1rem">
-            <div style="width:68px;height:68px;border-radius:22px;overflow:hidden;box-shadow:0 12px 32px rgba(99,102,241,.4),0 0 0 2.5px rgba(99,102,241,.18)">
-              <img src="icons/icon-192.png" style="width:100%;height:100%;object-fit:cover" alt="Logo"/>
-            </div>
-            <div style="position:absolute;bottom:-4px;right:-4px;width:22px;height:22px;background:#10b981;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(16,185,129,.45)"></div>
-          </div>
-          <div style="font-size:1.6rem;font-weight:900;color:#0f172a;letter-spacing:-.5px;line-height:1.2">Chào mừng trở lại</div>
-          <div style="font-size:.84rem;color:#94a3b8;margin-top:.3rem;font-weight:500">Đăng nhập để tiếp tục học tập</div>
-        </div>
+          <p class="hint">Phân biệt: <strong>i/L — 1/l — 0/O</strong></p>
 
-        <!-- Form -->
-        <form id="loginForm" style="display:flex;flex-direction:column;gap:.7rem;margin-top:.15rem">
-
-          <div style="display:flex;flex-direction:column;gap:.32rem">
-            <label style="font-size:.74rem;font-weight:700;color:#6366f1;letter-spacing:.6px;text-transform:uppercase">Tài khoản</label>
-            <div style="display:flex;align-items:center;background:#f8faff;border:1.5px solid #e0e7ff;border-radius:14px;overflow:hidden;transition:border-color .2s,box-shadow .2s" onfocusin="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.12)'" onfocusout="this.style.borderColor='#e0e7ff';this.style.boxShadow='none'">
-              <span style="padding:0 .85rem;font-size:1rem;color:#94a3b8;flex-shrink:0">📧</span>
-              <input type="text" id="usernameInput" placeholder="Gmail hoặc tên đăng nhập" required style="flex:1;border:none;outline:none;padding:.8rem .7rem .8rem 0;background:transparent;font-size:.92rem;color:#0f172a"/>
-            </div>
-          </div>
-
-          <div style="display:flex;flex-direction:column;gap:.32rem">
-            <label style="font-size:.74rem;font-weight:700;color:#6366f1;letter-spacing:.6px;text-transform:uppercase">Mật khẩu</label>
-            <div style="display:flex;align-items:center;background:#f8faff;border:1.5px solid #e0e7ff;border-radius:14px;overflow:hidden;transition:border-color .2s,box-shadow .2s" onfocusin="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.12)'" onfocusout="this.style.borderColor='#e0e7ff';this.style.boxShadow='none'">
-              <span style="padding:0 .85rem;font-size:1rem;color:#94a3b8;flex-shrink:0">🔑</span>
-              <input type="password" id="passwordInput" placeholder="Nhập mật khẩu" required style="flex:1;border:none;outline:none;padding:.8rem .7rem .8rem 0;background:transparent;font-size:.95rem;color:#0f172a;font-family:'Courier New',Courier,monospace;letter-spacing:.05em"/>
-            </div>
-            <div style="font-size:.71rem;color:#94a3b8;margin-top:.2rem;line-height:1.6">
-              ⚠️ Chú ý phân biệt: chữ <b style="color:#6366f1">i</b> thường (i) và chữ <b style="color:#6366f1">L</b> hoa (L) — số <b style="color:#6366f1">1</b> và chữ <b style="color:#6366f1">l</b> thường (l) — số <b style="color:#6366f1">0</b> và chữ <b style="color:#6366f1">O</b> hoa (O)
-            </div>
-          </div>
-
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:#64748b;cursor:pointer">
-              <input type="checkbox" style="accent-color:#6366f1;width:14px;height:14px"/> Ghi nhớ đăng nhập
+          <div class="row-between">
+            <label class="remember">
+              <input type="checkbox" name="remember"/>
+              <span>Ghi nhớ đăng nhập</span>
             </label>
-            <button type="button" onclick="document.getElementById('forgotPwModal').style.display='block'" style="font-size:.82rem;color:#6366f1;font-weight:700;background:none;border:none;cursor:pointer;padding:0;transition:opacity .2s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">Quên mật khẩu?</button>
+            <button type="button" class="link" style="background:none;border:none;padding:0;cursor:pointer" onclick="document.getElementById('forgotPwModal').style.display='block'">Quên mật khẩu?</button>
           </div>
 
           <div id="loginError" class="error-msg"></div>
 
-          <button type="submit" id="loginBtn" style="width:100%;padding:.9rem;font-size:.95rem;font-weight:800;border:none;border-radius:14px;color:#fff;cursor:pointer;position:relative;overflow:hidden;letter-spacing:.3px;background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#4f46e5 100%);background-size:200% 200%;animation:gradientShift 4s ease infinite;box-shadow:0 6px 24px rgba(99,102,241,.42);transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 32px rgba(99,102,241,.55)'" onmouseout="this.style.transform='';this.style.boxShadow='0 6px 24px rgba(99,102,241,.42)'">
+          <button type="submit" id="loginBtn" class="btn-login">
             <span id="loginBtnText">Đăng Nhập →</span>
-            <span id="loginBtnLoader" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;gap:.5rem">
+            <span id="loginBtnLoader">
               <span style="width:16px;height:16px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span>
               Đang xử lý...
             </span>
           </button>
 
-          <!-- Chấp nhận điều khoản -->
-          <p style="text-align:center;font-size:.74rem;color:#94a3b8;margin:.1rem 0 0;line-height:1.6">
-            Việc đăng nhập và sử dụng website đồng nghĩa với việc bạn chấp nhận mọi
-            <a href="policy.html" target="_blank" style="color:#6366f1;font-weight:700;text-decoration:none;border-bottom:1px dashed #a5b4fc">Điều khoản sử dụng</a>
+          <p class="legal">
+            Đăng nhập đồng nghĩa bạn chấp nhận
+            <a href="policy.html" target="_blank" class="link">Điều khoản sử dụng</a>
             và
-            <a href="policy.html" target="_blank" style="color:#6366f1;font-weight:700;text-decoration:none;border-bottom:1px dashed #a5b4fc">Chính sách bảo mật</a>
-            của hệ thống.
+            <a href="policy.html" target="_blank" class="link">Chính sách bảo mật</a>.
           </p>
-
         </form>
 
-        <!-- Divider -->
-        <div style="display:flex;align-items:center;gap:.5rem;margin-top:.05rem">
-          <div style="flex:1;height:1px;background:#f1f5f9"></div>
-          <span style="font-size:.74rem;color:#cbd5e1;font-weight:500">hoặc</span>
-          <div style="flex:1;height:1px;background:#f1f5f9"></div>
+        <div class="footer-links">
+          <a href="#" class="link" id="requestAccountBtn" onclick="event.preventDefault()">Chưa có tài khoản? Liên hệ trợ lý</a>
+          <a href="#" class="link" onclick="event.preventDefault();document.getElementById('guideModal').style.display='block'">Hướng dẫn</a>
         </div>
-
-        <!-- Footer links -->
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <p style="font-size:.82rem;color:#94a3b8;margin:0">Chưa có tài khoản? <span id="requestAccountBtn" style="color:#6366f1;font-weight:700;cursor:pointer;transition:opacity .2s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">Liên hệ trợ lý</span></p>
-          <a href="#" onclick="event.preventDefault();document.getElementById('guideModal').style.display='block'" style="color:#6366f1;font-size:.82rem;font-weight:700;display:flex;align-items:center;gap:.3rem;transition:opacity .2s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">📖 Hướng dẫn</a>
-        </div>
-
-        <!-- Warning notice -->
-        <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:1.5px solid #f59e0b;border-radius:12px;padding:.75rem 1rem;font-size:.82rem;color:#78350f;text-align:center;display:flex;align-items:center;justify-content:center;gap:.5rem;box-shadow:0 2px 8px rgba(245,158,11,.18)">
-          <span style="font-size:1.1rem;flex-shrink:0">⚠️</span>
-          <span><b style="color:#92400e">Vui lòng đọc kỹ</b> <a href="#" onclick="event.preventDefault();document.getElementById('guideModal').style.display='block'" style="color:#b45309;font-weight:800;text-decoration:underline;text-underline-offset:2px">hướng dẫn sử dụng</a> <b style="color:#92400e">trước khi liên hệ trợ lý</b></span>
-        </div>
-
-
-
-
-      </div>
-    </div>
-  </div>
-
-  <!-- FLOATING SOCIAL BUTTONS -->
-  <style>
-    .fab-wrap {
-      position: fixed;
-      bottom: 1.75rem;
-      right: 1.25rem;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      gap: .6rem;
-      align-items: flex-end;
-    }
-    .fab-item {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      text-decoration: none;
-      border-radius: 50px;
-      padding: .55rem;
-      box-shadow: 0 4px 16px rgba(0,0,0,.2);
-      transition: box-shadow .2s, padding .2s;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-    .fab-item svg { flex-shrink: 0; display: block; }
-    .fab-label {
-      font-size: .78rem;
-      font-weight: 700;
-      color: #fff;
-      width: 0;
-      overflow: hidden;
-      transition: width .25s cubic-bezier(.34,1.56,.64,1), margin .25s;
-      letter-spacing: .2px;
-      margin-left: 0;
-    }
-    .fab-item:hover { padding: .55rem 1rem .55rem .6rem; box-shadow: 0 8px 28px rgba(0,0,0,.28); }
-    .fab-item:hover .fab-label { width: 70px; margin-left: .5rem; }
-    .fab-item-fb { background: #1877f2; }
-    .fab-item-tt { background: #010101; }
-  </style>
-
-  <div class="fab-wrap">
-    <a href="https://www.facebook.com/duyhoangdaytoan" target="_blank" rel="noopener noreferrer" class="fab-item fab-item-fb" aria-label="Facebook">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/></svg>
-      <span class="fab-label">Facebook</span>
-    </a>
-    <a href="https://www.tiktok.com/@duyhoangdaytoan" target="_blank" rel="noopener noreferrer" class="fab-item fab-item-tt" aria-label="TikTok">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/></svg>
-      <span class="fab-label">TikTok</span>
-    </a>
-  </div>
-
-  <!-- FOOTER BẢN QUYỀN -->
-  <style>
-    .footer-main { background: linear-gradient(135deg,#1e1b4b 0%,#312e81 100%); color:#fff; padding: 2.5rem 1.5rem 0; box-sizing: border-box; width:100%; }
-    .footer-grid { max-width:960px; margin:0 auto; display:grid; grid-template-columns:1.1fr 1fr 0.9fr; gap:1.5rem; padding-bottom:2rem; border-bottom:1px solid rgba(255,255,255,.1); box-sizing:border-box; width:100%; }
-    .footer-col { display:flex; flex-direction:column; gap:.7rem; min-width:0; word-break:break-word; }
-    .footer-label { font-size:.72rem; font-weight:800; color:#a5b4fc; letter-spacing:.8px; text-transform:uppercase; margin-bottom:.15rem; }
-    .footer-row { display:flex; align-items:flex-start; gap:.5rem; font-size:.78rem; color:rgba(255,255,255,.75); line-height:1.65; }
-    .footer-row span:first-child { flex-shrink:0; margin-top:.05rem; }
-    .footer-bottom { max-width:960px; margin:0 auto; padding:.85rem 0 1.25rem; text-align:center; box-sizing:border-box; }
-    .footer-bottom p { margin:0 0 .3rem; font-size:.71rem; color:rgba(255,255,255,.3); line-height:1.85; }
-    .footer-bottom p:first-child { font-size:.75rem; color:rgba(255,255,255,.5); font-weight:700; margin-bottom:.4rem; }
-    .footer-social { display:flex; gap:.6rem; flex-wrap:wrap; }
-    .footer-social a { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:transform .2s, box-shadow .2s; }
-    .footer-social a:hover { transform:translateY(-3px); }
-    .footer-badge { display:inline-flex; align-items:center; gap:.4rem; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:.3rem .7rem; width:fit-content; max-width:100%; }
-    @media (max-width:760px) {
-      .footer-main { padding: 2rem 1.25rem 0; }
-      .footer-grid { grid-template-columns: 1fr 1fr; gap:1.25rem; }
-    }
-    @media (max-width:440px) {
-      .footer-grid { grid-template-columns: 1fr; }
-    }
-  </style>
-
-  <footer class="footer-main">
-    <div class="footer-grid">
-
-      <!-- Cột 1: Logo & hệ thống -->
-      <div class="footer-col">
-        <div style="display:flex;align-items:center;gap:.65rem">
-          <div style="width:42px;height:42px;border-radius:12px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.4);flex-shrink:0">
-            <img src="icons/icon-192.png" style="width:100%;height:100%;object-fit:cover" alt="Logo"/>
-          </div>
-          <div>
-            <div style="font-size:.9rem;font-weight:900;letter-spacing:-.2px;line-height:1.2">DHDT LMS</div>
-            <div style="font-size:.68rem;color:#a5b4fc;font-weight:600;margin-top:.1rem">Education System</div>
-          </div>
-        </div>
-        <div class="footer-badge">
-          <span style="width:7px;height:7px;background:#10b981;border-radius:50%;flex-shrink:0;box-shadow:0 0 6px #10b981"></span>
-          <span style="font-size:.7rem;font-weight:700;color:rgba(255,255,255,.75);letter-spacing:.3px">Đang hoạt động</span>
-        </div>
-      </div>
-
-      <!-- Cột 2: Thông tin hỗ trợ -->
-      <div class="footer-col">
-        <div class="footer-label">Hỗ trợ</div>
-        <div class="footer-row">
-          <span>📍</span>
-          <span>Nguyễn Thông, An Thới,<br/>Bình Thủy, Cần Thơ</span>
-        </div>
-        <div class="footer-row">
-          <span>🕐</span>
-          <span>Thứ 2 – Chủ nhật<br/><b style="color:#a5b4fc">7:00 – 22:00</b></span>
-        </div>
-        <div class="footer-row">
-          <span>🚀</span>
-          <span>Thiết kế &amp; vận hành bởi<br/><b style="color:#a5b4fc">Tr.Cường08</b> &amp; <b style="color:#a5b4fc">Quốc Toàn</b></span>
-        </div>
-        <a href="policy.html" style="display:inline-flex;align-items:center;gap:.4rem;font-size:.75rem;color:rgba(165,180,252,.85);font-weight:600;text-decoration:none;transition:color .2s;margin-top:.1rem" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(165,180,252,.85)'">
-          🔒 Chính sách &amp; Điều khoản
-        </a>
-      </div>
-
-      <!-- Cột 3: Kết nối -->
-      <div class="footer-col">
-        <div class="footer-label">Kết nối với chúng tôi</div>
-        <div class="footer-social">
-          <a href="https://www.facebook.com/duyhoangdaytoan" target="_blank" rel="noopener noreferrer" title="Facebook"
-             style="background:#1877f2;box-shadow:0 4px 14px rgba(24,119,242,.45)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/></svg>
-          </a>
-          <a href="https://www.tiktok.com/@duyhoangdaytoan" target="_blank" rel="noopener noreferrer" title="TikTok"
-             style="background:#010101;border:1.5px solid rgba(255,255,255,.15);box-shadow:0 4px 14px rgba(0,0,0,.4)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/></svg>
-          </a>
-        </div>
-        <p style="font-size:.71rem;color:rgba(255,255,255,.35);line-height:1.7;margin:0">Theo dõi để nhận thông tin mới nhất về bài giảng &amp; lộ trình học.</p>
-      </div>
-
-    </div>
-
-    <!-- Bottom bar -->
-    <div class="footer-bottom">
-      <p>© 2026 DHDT LMS</p>
-      <p>Toàn bộ nội dung trên website bao gồm video bài giảng, tài liệu học tập, đề luyện thi, hình ảnh, giao diện và hệ thống quản lý đều thuộc quyền sở hữu của chúng tôi và được pháp luật bảo hộ. Nghiêm cấm mọi hành vi sao chép, chỉnh sửa, phát tán, chia sẻ hoặc sử dụng dưới bất kỳ hình thức nào khi chưa có sự cho phép bằng văn bản từ chủ sở hữu. Mọi hành vi vi phạm bản quyền sẽ bị xử lý theo quy định của pháp luật hiện hành.</p>
-      <p>Phiên bản <b style="color:#6366f1">v1.4.9</b> • <span style="color:#6366f1">by.trcuong</span></p>
-    </div>
-
-  </footer>
-
-  <!-- xoá style cũ -->
-  <style>
-    @media (max-width: 768px) { .legacy-footer-fix { display:none; } }
-  </style>
+      </form>
+    </div><!-- /.login-card -->
+  </div><!-- /.login-wrap -->
 
   <!-- MODAL HƯỚNG DẪN -->
-  <div id="guideModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:999;overflow-y:auto;backdrop-filter:blur(4px)">
-    <div style="max-width:580px;margin:1.5rem auto 2rem;border-radius:20px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.3);position:relative">
-
-      <!-- Header -->
-      <div style="background:linear-gradient(135deg,#1e1b4b,#4338ca);padding:1.75rem 1.5rem 1.5rem;color:#fff;position:relative">
-        <button onclick="document.getElementById('guideModal').style.display='none'" style="position:absolute;top:1rem;right:1rem;background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">✕</button>
-        <div style="display:flex;align-items:center;gap:1rem">
-          <div style="width:48px;height:48px;background:rgba(255,255,255,.15);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">📖</div>
-          <div>
-            <div style="font-size:1.2rem;font-weight:900;letter-spacing:-.3px">Hướng dẫn sử dụng</div>
-            <div style="font-size:.8rem;opacity:.65;margin-top:.2rem">DHDT LMS</div>
-          </div>
-        </div>
+  <div id="guideModal" style="display:none;position:fixed;inset:0;z-index:12000;overflow-y:auto;padding:20px;box-sizing:border-box;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
+    <div style="width:min(520px,100%);margin:20px auto 32px;border-radius:20px;overflow:hidden;background:#1e293b;border:1px solid rgba(255,255,255,.1);box-shadow:0 24px 64px rgba(0,0,0,.55);position:relative">
+      <div style="position:relative;padding:22px 48px 18px 22px;background:linear-gradient(145deg,#1a1440 0%,#2a1830 50%,#7c2d12 100%);color:#fff8eb">
+        <button type="button" onclick="document.getElementById('guideModal').style.display='none'" aria-label="Đóng" style="position:absolute;top:14px;right:14px;width:34px;height:34px;border:1px solid rgba(255,255,255,.25);border-radius:50%;background:rgba(255,255,255,.12);color:#fff8eb;font:700 16px/1 system-ui,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;margin:0">✕</button>
+        <div style="display:block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#f0b429;margin:0 0 6px;line-height:1.3">DHDT LMS</div>
+        <div style="display:block;margin:0;padding:0;font-size:20px;font-weight:800;line-height:1.3;color:#fff8eb;letter-spacing:-.02em">Hướng dẫn sử dụng</div>
+        <div style="display:block;margin:6px 0 0;padding:0;font-size:13px;font-weight:500;line-height:1.4;color:rgba(255,248,235,.75)">DHDT LMS · 4 bước bắt đầu học</div>
       </div>
 
-      <!-- Body -->
-      <div style="background:#fff;padding:1.5rem;display:flex;flex-direction:column;gap:1rem">
-
-        <!-- Xin cấp tài khoản -->
-        <div style="background:#f0fdf4;border-radius:14px;padding:1rem 1.1rem;border-left:4px solid #10b981">
-          <div style="display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:.92rem;color:#065f46;margin-bottom:.5rem">
-            <span style="background:#10b981;color:#fff;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0">1</span>
-            📌 Xin cấp tài khoản
+      <div style="display:flex;flex-direction:column;gap:12px;padding:18px;background:#0f172a">
+        <div style="border-radius:14px;padding:14px 16px;background:#f7fdf9;border:1px solid #bbf7d0">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="width:26px;height:26px;border-radius:8px;background:#059669;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</span>
+            <div style="font-weight:800;font-size:15px;color:#065f46;line-height:1.3">Xin cấp tài khoản</div>
           </div>
-          <p style="font-size:.85rem;line-height:1.75;color:#374151;margin:0 0 .65rem">Học viên mới nhắn tin riêng cho <b>Trợ Lý Duy Hoàng - Trần Cường hoặc Quốc Toàn</b> theo đúng mẫu sau:</p>
-          <div style="display:flex;flex-direction:column;gap:.35rem">
-            <div style="background:#fff;border-radius:8px;padding:.4rem .75rem;font-size:.83rem;border:1px solid #bbf7d0;display:flex;align-items:center;gap:.5rem">
-              <span style="font-size:.68rem;background:#dcfce7;color:#15803d;padding:.1rem .4rem;border-radius:4px;font-weight:700;flex-shrink:0">Tin 1</span>
-              <span style="font-family:monospace;color:#166534;font-weight:600">xin cấp tài khoản học tập trên web</span>
-            </div>
-            <div style="background:#fff;border-radius:8px;padding:.4rem .75rem;font-size:.83rem;border:1px solid #bbf7d0;display:flex;align-items:center;gap:.5rem">
-              <span style="font-size:.68rem;background:#dcfce7;color:#15803d;padding:.1rem .4rem;border-radius:4px;font-weight:700;flex-shrink:0">Tin 2</span>
-              <span style="font-family:monospace;color:#166534;font-weight:600">Tên lớp (VD: vsat 6)</span>
-            </div>
-            <div style="background:#fff;border-radius:8px;padding:.4rem .75rem;font-size:.83rem;border:1px solid #bbf7d0;display:flex;align-items:center;gap:.5rem">
-              <span style="font-size:.68rem;background:#dcfce7;color:#15803d;padding:.1rem .4rem;border-radius:4px;font-weight:700;flex-shrink:0">Tin 3</span>
-              <span style="font-family:monospace;color:#166534;font-weight:600">Số điện thoại (VD: 0901234567)</span>
-            </div>
-            <div style="background:#fff;border-radius:8px;padding:.4rem .75rem;font-size:.83rem;border:1px solid #bbf7d0;display:flex;align-items:center;gap:.5rem">
-              <span style="font-size:.68rem;background:#dcfce7;color:#15803d;padding:.1rem .4rem;border-radius:4px;font-weight:700;flex-shrink:0">Tin 4</span>
-              <span style="font-family:monospace;color:#166534;font-weight:600">Gmail (VD: hocsinh@gmail.com)</span>
-            </div>
+          <p style="margin:0;font-size:14px;line-height:1.65;color:#475569">Học viên mới nhắn tin riêng cho <b>Trợ Lý Duy Hoàng - Trần Cường hoặc Quốc Toàn</b> theo đúng mẫu sau:</p>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">
+            <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d1fae5;border-radius:10px;padding:8px 10px"><span style="font-size:10px;font-weight:800;text-transform:uppercase;background:#dcfce7;color:#15803d;padding:3px 6px;border-radius:6px;flex-shrink:0">Tin 1</span><span style="font-size:13px;font-family:ui-monospace,Consolas,monospace;color:#166534;font-weight:600">xin cấp tài khoản học tập trên web</span></div>
+            <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d1fae5;border-radius:10px;padding:8px 10px"><span style="font-size:10px;font-weight:800;text-transform:uppercase;background:#dcfce7;color:#15803d;padding:3px 6px;border-radius:6px;flex-shrink:0">Tin 2</span><span style="font-size:13px;font-family:ui-monospace,Consolas,monospace;color:#166534;font-weight:600">Tên lớp (VD: vsat 6)</span></div>
+            <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d1fae5;border-radius:10px;padding:8px 10px"><span style="font-size:10px;font-weight:800;text-transform:uppercase;background:#dcfce7;color:#15803d;padding:3px 6px;border-radius:6px;flex-shrink:0">Tin 3</span><span style="font-size:13px;font-family:ui-monospace,Consolas,monospace;color:#166534;font-weight:600">Số điện thoại (VD: 0901234567)</span></div>
+            <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d1fae5;border-radius:10px;padding:8px 10px"><span style="font-size:10px;font-weight:800;text-transform:uppercase;background:#dcfce7;color:#15803d;padding:3px 6px;border-radius:6px;flex-shrink:0">Tin 4</span><span style="font-size:13px;font-family:ui-monospace,Consolas,monospace;color:#166534;font-weight:600">Gmail (VD: hocsinh@gmail.com)</span></div>
           </div>
-          <!-- Lưu ý tách tin nhắn -->
-          <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:2px solid #f59e0b;border-radius:12px;padding:.75rem 1rem;margin-top:.6rem">
-            <div style="font-weight:800;font-size:.85rem;color:#92400e;margin-bottom:.4rem;display:flex;align-items:center;gap:.4rem">
-              <span>⚠️</span> Lưu ý quan trọng
-            </div>
-            <div style="font-size:.83rem;color:#78350f;font-weight:700;margin-bottom:.35rem">Tách riêng 4 tin nhắn — KHÔNG nhắn chung 1 tin nhắn</div>
-            <div style="display:flex;flex-direction:column;gap:.25rem;font-size:.82rem;color:#92400e">
-              <div>✅ Gửi <b>Tin 1</b> → rồi <b>Tin 2</b> → rồi <b>Tin 3</b> → rồi <b>Tin 4</b> (mỗi tin 1 lần gửi)</div>
-              <div>❌ Không gộp cả 4 nội dung vào <b>1 tin nhắn duy nhất</b></div>
-            </div>
+          <div style="margin-top:10px;border-radius:12px;padding:12px;background:#fffbeb;border:1px solid #fbbf24">
+            <div style="font-weight:800;font-size:13px;color:#92400e;margin-bottom:4px">Lưu ý quan trọng</div>
+            <div style="font-size:13px;color:#78350f;font-weight:700;margin-bottom:6px;line-height:1.45">Tách riêng 4 tin nhắn — KHÔNG nhắn chung 1 tin nhắn</div>
+            <div style="font-size:12px;color:#92400e;line-height:1.5">Gửi Tin 1 → rồi Tin 2 → rồi Tin 3 → rồi Tin 4 (mỗi tin 1 lần gửi). Không gộp cả 4 vào 1 tin.</div>
           </div>
         </div>
 
-        <!-- Đăng nhập -->
-        <div style="background:#eef2ff;border-radius:14px;padding:1rem 1.1rem;border-left:4px solid #6366f1">
-          <div style="display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:.92rem;color:#3730a3;margin-bottom:.5rem">
-            <span style="background:#6366f1;color:#fff;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0">2</span>
-            🔐 Đăng nhập
+        <div style="border-radius:14px;padding:14px 16px;background:#fffaf0;border:1px solid #f0c987">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="width:26px;height:26px;border-radius:8px;background:#e86a1a;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</span>
+            <div style="font-weight:800;font-size:15px;color:#9a3412;line-height:1.3">Đăng nhập</div>
           </div>
-          <p style="font-size:.85rem;line-height:1.75;color:#374151;margin:0">Nhắn <b>Trợ Lý Duy Hoàng - Trần Cường hoặc Quốc Toàn</b> cung cấp Gmail + SĐT để nhận thông tin đăng nhập. Mỗi tài khoản chỉ hoạt động trên <b>01 thiết bị</b> tại một thời điểm.</p>
+          <p style="margin:0;font-size:14px;line-height:1.65;color:#475569">Nhắn <b>Trợ Lý Duy Hoàng - Trần Cường hoặc Quốc Toàn</b> cung cấp Gmail + SĐT để nhận thông tin đăng nhập. Mỗi tài khoản chỉ hoạt động trên <b>01 thiết bị</b> tại một thời điểm.</p>
         </div>
 
-        <!-- Xem bài học -->
-        <div style="background:#e0f2fe;border-radius:14px;padding:1rem 1.1rem;border-left:4px solid #0ea5e9">
-          <div style="display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:.92rem;color:#0369a1;margin-bottom:.5rem">
-            <span style="background:#0ea5e9;color:#fff;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0">3</span>
-            📚 Xem bài học
+        <div style="border-radius:14px;padding:14px 16px;background:#fffbeb;border:1px solid #f5d76e">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="width:26px;height:26px;border-radius:8px;background:#c2410c;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</span>
+            <div style="font-weight:800;font-size:15px;color:#9a3412;line-height:1.3">Xem bài học</div>
           </div>
-          <p style="font-size:.85rem;line-height:1.75;color:#374151;margin:0">Vào mục <b>Bài học</b> → chọn nhóm → chọn bài để xem video và tài liệu. Hệ thống chỉ hiển thị nội dung đúng lớp bạn đã đăng ký.</p>
+          <p style="margin:0;font-size:14px;line-height:1.65;color:#475569">Vào mục <b>Bài học</b> → chọn nhóm → chọn bài để xem video và tài liệu. Hệ thống chỉ hiển thị nội dung đúng lớp bạn đã đăng ký.</p>
         </div>
 
-        <!-- Video -->
-        <div style="background:#d1fae5;border-radius:14px;padding:1rem 1.1rem;border-left:4px solid #10b981">
-          <div style="display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:.92rem;color:#065f46;margin-bottom:.5rem">
-            <span style="background:#10b981;color:#fff;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0">4</span>
-            🎬 Xem video bài giảng
+        <div style="border-radius:14px;padding:14px 16px;background:#fff7ed;border:1px solid #fdba74">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="width:26px;height:26px;border-radius:8px;background:#b45309;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</span>
+            <div style="font-weight:800;font-size:15px;color:#9a3412;line-height:1.3">Xem video bài giảng</div>
           </div>
-          <p style="font-size:.85rem;line-height:1.75;color:#374151;margin:0">Nhấn vào thumbnail để phát video. Trên điện thoại nên <b>xoay ngang màn hình</b> để học tốt hơn. Video <b>không hỗ trợ tải xuống</b> dưới mọi hình thức.</p>
+          <p style="margin:0;font-size:14px;line-height:1.65;color:#475569">Nhấn vào thumbnail để phát video. Trên điện thoại nên <b>xoay ngang màn hình</b> để học tốt hơn. Video <b>không hỗ trợ tải xuống</b> dưới mọi hình thức.</p>
         </div>
 
-        <!-- Bảo mật -->
-        <div style="background:#fee2e2;border-radius:14px;padding:1rem 1.1rem;border-left:4px solid #ef4444">
-          <div style="display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:.92rem;color:#991b1b;margin-bottom:.6rem">
-            <span style="background:#ef4444;color:#fff;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0">!</span>
-            🚨 Lưu ý bảo mật
+        <div style="border-radius:14px;padding:14px 16px;background:#fef2f2;border:1px solid #fecaca">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="width:26px;height:26px;border-radius:8px;background:#dc2626;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">!</span>
+            <div style="font-weight:800;font-size:15px;color:#991b1b;line-height:1.3">Lưu ý bảo mật</div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:.4rem">
-            <div style="display:flex;gap:.5rem;font-size:.83rem;color:#374151;align-items:flex-start"><span style="color:#ef4444;flex-shrink:0">•</span>Không chia sẻ tài khoản cho người khác dưới bất kỳ hình thức nào.</div>
-            <div style="display:flex;gap:.5rem;font-size:.83rem;color:#374151;align-items:flex-start"><span style="color:#ef4444;flex-shrink:0">•</span>Nghiêm cấm chụp màn hình, quay video hoặc phát tán nội dung bài giảng.</div>
-            <div style="display:flex;gap:.5rem;font-size:.83rem;color:#374151;align-items:flex-start"><span style="color:#ef4444;flex-shrink:0">•</span>Mọi hoạt động bất thường được ghi nhận và báo cáo đến giáo viên.</div>
-            <div style="display:flex;gap:.5rem;font-size:.83rem;color:#374151;align-items:flex-start"><span style="color:#ef4444;flex-shrink:0">•</span>Tài khoản vi phạm sẽ bị <b>khóa vĩnh viễn</b> mà không cần báo trước.</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:#475569;line-height:1.5">
+            <div style="background:#fff;border:1px solid #fecaca;border-radius:10px;padding:8px 10px">• Không chia sẻ tài khoản cho người khác dưới bất kỳ hình thức nào.</div>
+            <div style="background:#fff;border:1px solid #fecaca;border-radius:10px;padding:8px 10px">• Nghiêm cấm chụp màn hình, quay video hoặc phát tán nội dung bài giảng.</div>
+            <div style="background:#fff;border:1px solid #fecaca;border-radius:10px;padding:8px 10px">• Mọi hoạt động bất thường được ghi nhận và báo cáo đến giáo viên.</div>
+            <div style="background:#fff;border:1px solid #fecaca;border-radius:10px;padding:8px 10px">• Tài khoản vi phạm sẽ bị <b>khóa vĩnh viễn</b> mà không cần báo trước.</div>
           </div>
         </div>
 
-        <!-- Liên hệ -->
-        <div style="background:#f8fafc;border-radius:14px;padding:1rem 1.1rem;border:1.5px solid #e2e8f0">
-          <div style="font-weight:800;font-size:.92rem;color:#0f172a;margin-bottom:.75rem">📞 Liên hệ hỗ trợ</div>
-          <div style="display:flex;flex-direction:column;gap:.5rem">
-            <div style="display:flex;align-items:center;gap:.75rem;background:#fff;border-radius:10px;padding:.65rem .85rem;border:1px solid #e2e8f0">
-              <span style="font-size:1.2rem">🛠️</span>
-              <div style="flex:1">
-                <div style="font-weight:700;font-size:.85rem">Kỹ thuật & Tài khoản</div>
-                <div style="font-size:.78rem;color:#64748b">Liên hệ <b>Trợ Lý Duy Hoàng - Trần Cường hoặc Quốc Toàn</b> — cung cấp Gmail, SĐT</div>
+        <div style="border-radius:14px;padding:14px 16px;background:#fff;border:1px solid #ece4d8">
+          <div style="font-weight:800;font-size:15px;color:#1a1a1a;margin:0 0 10px">Liên hệ hỗ trợ</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:10px;background:#fff8ef;border:1px solid #ece4d8;border-radius:12px;padding:10px;flex-wrap:wrap">
+              <div style="flex:1;min-width:140px">
+                <div style="font-weight:700;font-size:13px;color:#1a1a1a">Kỹ thuật & Tài khoản</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px;line-height:1.4">Liên hệ <b>Trợ Lý Duy Hoàng - Trần Cường hoặc Quốc Toàn</b></div>
               </div>
-              <a href="https://zalo.me/84869573231" target="_blank" style="display:inline-flex;align-items:center;gap:.4rem;text-decoration:none;background:linear-gradient(135deg,#0068ff,#0052cc);color:#fff;font-size:.78rem;font-weight:700;padding:.4rem .8rem;border-radius:8px;flex-shrink:0">
-                <svg width="14" height="14" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="12" fill="white" fill-opacity="0.2"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-size="26" font-weight="900" fill="white" font-family="Arial,sans-serif">Z</text></svg>
-                Trần Cường
-              </a>
-              <a href="https://zalo.me/84969795482" target="_blank" style="display:inline-flex;align-items:center;gap:.4rem;text-decoration:none;background:linear-gradient(135deg,#0068ff,#0052cc);color:#fff;font-size:.78rem;font-weight:700;padding:.4rem .8rem;border-radius:8px;flex-shrink:0">
-                <svg width="14" height="14" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="12" fill="white" fill-opacity="0.2"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-size="26" font-weight="900" fill="white" font-family="Arial,sans-serif">Z</text></svg>
-                Quốc Toàn
-              </a>
-            </div>
-            <div style="display:flex;align-items:center;gap:.75rem;background:#fff;border-radius:10px;padding:.65rem .85rem;border:1px solid #e2e8f0">
-              <span style="font-size:1.2rem">📐</span>
-              <div><div style="font-weight:700;font-size:.85rem">Thắc mắc chuyên môn</div><div style="font-size:.78rem;color:#64748b">Liên hệ trực tiếp <b>Duy Hoàng Giáo viên</b></div></div>
-            </div>
-            <!-- Thời gian hỗ trợ -->
-            <div style="display:flex;align-items:center;gap:.75rem;background:linear-gradient(135deg,#eef2ff,#e0e7ff);border-radius:10px;padding:.65rem .85rem;border:1px solid #c7d2fe">
-              <span style="font-size:1.2rem">🕐</span>
-              <div>
-                <div style="font-weight:700;font-size:.85rem;color:#3730a3">Thời gian hỗ trợ</div>
-                <div style="font-size:.78rem;color:#4f46e5;font-weight:600">Thứ 2 – Chủ nhật &nbsp;•&nbsp; 7:00 – 22:00</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-left:auto">
+                <a href="https://zalo.me/84869573231" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;text-decoration:none;background:#0068ff;color:#fff;font-size:12px;font-weight:700;padding:6px 10px;border-radius:8px">Zalo Cường</a>
+                <a href="https://zalo.me/84969795482" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;text-decoration:none;background:#0068ff;color:#fff;font-size:12px;font-weight:700;padding:6px 10px;border-radius:8px">Zalo Toàn</a>
               </div>
             </div>
+            <div style="background:#fff8ef;border:1px solid #ece4d8;border-radius:12px;padding:10px">
+              <div style="font-weight:700;font-size:13px;color:#1a1a1a">Thắc mắc chuyên môn</div>
+              <div style="font-size:12px;color:#64748b;margin-top:2px">Liên hệ trực tiếp <b>Duy Hoàng Giáo viên</b></div>
+            </div>
+            <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:12px;padding:10px">
+              <div style="font-weight:700;font-size:13px;color:#9a3412">Thời gian hỗ trợ</div>
+              <div style="font-size:12px;color:#c2410c;font-weight:600;margin-top:2px">Thứ 2 – Chủ nhật · 7:00 – 22:00</div>
+            </div>
           </div>
         </div>
 
-        <p style="text-align:center;font-size:.82rem;color:#94a3b8;font-style:italic;margin:0">Chúng tôi luôn đồng hành cùng bạn trên hành trình chinh phục đại học 💪</p>
-
-        <button onclick="document.getElementById('guideModal').style.display='none'" style="width:100%;padding:.75rem;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:12px;font-size:.92rem;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(99,102,241,.3)">Đã hiểu, đóng lại ✓</button>
+        <p style="text-align:center;font-size:13px;color:#94a3b8;margin:2px 0 0;line-height:1.45">Chúng tôi luôn đồng hành cùng bạn trên hành trình chinh phục đại học</p>
+        <button type="button" onclick="document.getElementById('guideModal').style.display='none'" style="width:100%;padding:14px;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;background:#3b82f6;box-shadow:0 8px 20px rgba(59,130,246,.35)">Đã hiểu, đóng lại</button>
       </div>
     </div>
   </div>
@@ -683,15 +569,14 @@
       </div>
 
       <!-- Body -->
-      <div style="background:#fff;padding:1.5rem;display:flex;flex-direction:column;gap:.85rem">
-
-        <p style="font-size:.88rem;color:#475569;line-height:1.7;margin:0">Hệ thống <b>không hỗ trợ tự đặt lại mật khẩu</b> để đảm bảo bảo mật. Vui lòng liên hệ Trợ Lý Duy Hoàng - Trần Cường hoặc Quốc Toàn theo quy trình dưới đây:</p>
+      <div style="background:#1e293b;padding:1.5rem;display:flex;flex-direction:column;gap:.85rem">
+        <p style="font-size:.88rem;color:#94a3b8;line-height:1.7;margin:0">Hệ thống <b style="color:#f1f5f9">không hỗ trợ tự đặt lại mật khẩu</b> để đảm bảo bảo mật. Vui lòng liên hệ Trợ Lý Duy Hoàng - Trần Cường hoặc Quốc Toàn theo quy trình dưới đây:</p>
 
         <!-- Bước 1 -->
-        <div style="display:flex;gap:.85rem;align-items:flex-start;background:#eef2ff;border-radius:14px;padding:1rem 1.1rem">
+        <div style="display:flex;gap:.85rem;align-items:flex-start;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.2);border-radius:14px;padding:1rem 1.1rem">
           <div style="width:32px;height:32px;background:#6366f1;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;flex-shrink:0">1</div>
           <div>
-            <div style="font-weight:700;font-size:.9rem;color:#3730a3;margin-bottom:.3rem">Nhắn tin cho Trợ Lý Duy Hoàng - Trần Cường hoặc Quốc Toàn</div>
+            <div style="font-weight:700;font-size:.9rem;color:#a5b4fc;margin-bottom:.3rem">Nhắn tin cho Trợ Lý Duy Hoàng - Trần Cường hoặc Quốc Toàn</div>
             <div style="font-size:.83rem;color:#475569;line-height:1.65">Liên hệ qua Zalo và cung cấp đầy đủ thông tin xác minh.</div>
             <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.7rem">
               <a href="https://zalo.me/84869573231" target="_blank" style="display:inline-flex;align-items:center;gap:.6rem;text-decoration:none;background:linear-gradient(135deg,#0068ff,#0052cc);color:#fff;font-size:.85rem;font-weight:700;padding:.55rem 1.1rem;border-radius:10px;box-shadow:0 4px 12px rgba(0,104,255,.35);transition:transform .15s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
@@ -741,19 +626,19 @@
   </div>
 
   <script>
-    const { createClient } = supabase;    const db = createClient(
-      'https://gojpmogjretoxplydjvg.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvanBtb2dqcmV0b3hwbHlkanZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0Nzg4ODEsImV4cCI6MjA5MzA1NDg4MX0.iLCNd2VRMiZoFp6_KclZlFsOenUNoM041tl1fobHKDA'
-    );
+    const db = DH_CFG.createDb();
 
-    // Đăng ký Service Worker (PWA)
+    // Đăng ký Service Worker (PWA) + xóa cache cũ (bỏ màn CẢNH BÁO chờ đăng nhập)
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
-
-      // Tự động reload khi có bản cập nhật mới
+      navigator.serviceWorker.register('./sw.js?v=1.5.1').catch(() => {});
       navigator.serviceWorker.addEventListener('message', e => {
         if (e.data?.type === 'SW_UPDATED') window.location.reload();
       });
+      if (window.caches) {
+        caches.keys().then(keys => Promise.all(
+          keys.filter(k => k !== 'DHDT-lms-v1.5.1').map(k => caches.delete(k))
+        ));
+      }
     }
 
     // Hash mật khẩu admin bằng SHA-256 trước khi lưu
@@ -766,8 +651,8 @@
     (async () => {
       const stored = localStorage.getItem('dh_teacher');
       if (!stored || !JSON.parse(stored).hashed) {
-        const h = await hashPw('admindH89065');
-        localStorage.setItem('dh_teacher', JSON.stringify({ username: 'admin124532Dh', passwordHash: h, full_name: 'Admin', hashed: true }));
+        const h = await hashPw(DH_CFG.adminPw);
+        localStorage.setItem('dh_teacher', JSON.stringify({ username: DH_CFG.adminUser, passwordHash: h, full_name: 'Admin', hashed: true }));
       }
     })();
 
@@ -811,8 +696,8 @@
           // Kiểm tra admin trước
           const t = JSON.parse(localStorage.getItem('dh_teacher') || 'null');
           if (!t) {
-            const h = await hashPw('admindH89065');
-            localStorage.setItem('dh_teacher', JSON.stringify({ username: 'admin124532Dh', passwordHash: h, full_name: 'Admin', hashed: true }));
+            const h = await hashPw(DH_CFG.adminPw);
+            localStorage.setItem('dh_teacher', JSON.stringify({ username: DH_CFG.adminUser, passwordHash: h, full_name: 'Admin', hashed: true }));
           }
           const teacher = JSON.parse(localStorage.getItem('dh_teacher'));
           const inputHash = await hashPw(p);
@@ -821,6 +706,9 @@
             sessionStorage.setItem('dh_role', 'teacher');
             sessionStorage.setItem('dh_user', u);
             sessionStorage.setItem('dh_name', teacher.full_name);
+            localStorage.setItem('dh_role', 'teacher');
+            localStorage.setItem('dh_user', u);
+            localStorage.setItem('dh_name', teacher.full_name);
             window.location.href = 'admin.html';
             return;
           }
@@ -833,6 +721,9 @@
               sessionStorage.setItem('dh_role', 'teacher');
               sessionStorage.setItem('dh_user', u);
               sessionStorage.setItem('dh_name', matchedExtra.full_name || u);
+              localStorage.setItem('dh_role', 'teacher');
+              localStorage.setItem('dh_user', u);
+              localStorage.setItem('dh_name', matchedExtra.full_name || u);
               window.location.href = 'admin.html';
               return;
             } else {
@@ -862,6 +753,9 @@
             sessionStorage.setItem('dh_role', 'assistant');
             sessionStorage.setItem('dh_user', u);
             sessionStorage.setItem('dh_name', assistantData.full_name || u);
+            localStorage.setItem('dh_role', 'assistant');
+            localStorage.setItem('dh_user', u);
+            localStorage.setItem('dh_name', assistantData.full_name || u);
             window.location.href = 'admin.html';
             return;
           }
@@ -956,6 +850,10 @@
           sessionStorage.setItem('dh_name', student.full_name);
           sessionStorage.setItem('dh_token', token);
           sessionStorage.setItem('dh_code', student.student_code || u);
+          // Lưu thêm vào localStorage để các tab khác (diemdanh.html) đọc được
+          localStorage.setItem('dh_role', 'student');
+          localStorage.setItem('dh_user', u);
+          localStorage.setItem('dh_name', student.full_name);
 
           // Parse thông tin thiết bị
           const ua = navigator.userAgent;
@@ -974,10 +872,9 @@
 
           try { db.from('login_logs').insert({ username: u, student_name: student.full_name, class_name: student.class_name||'', device_info: deviceInfo, browser, os, device_type: deviceType }).then(() => {}); } catch(e) {}
 
-          // Hiện thông báo đăng nhập thiết bị mới nếu có phiên cũ
+          // Hiện cảnh báo chờ rồi mới vào trang học
           const noticeEl = document.getElementById('monitorNotice');
           if (hadOldSession) {
-            // Thêm dòng cảnh báo thiết bị cũ bị đăng xuất
             const extra = document.createElement('div');
             extra.style.cssText = 'margin-top:.5rem;font-size:.82rem;color:#f59e0b;font-weight:600';
             extra.textContent = '⚠️ Thiết bị đang đăng nhập trước đó đã bị đăng xuất.';
@@ -1100,7 +997,7 @@
     })();
   </script>
 
-  <!-- THÔNG BÁO GIÁM SÁT -->
+  <!-- THÔNG BÁO GIÁM SÁT (chỉ hiện khi đăng nhập thành công, trước khi vào trang HS) -->
   <div id="monitorNotice" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:1rem;text-align:center;padding:2rem">
     <div style="font-size:3rem">⚠️</div>
     <div style="color:#ffcc00;font-size:1.2rem;font-weight:700">CẢNH BÁO</div>
@@ -1245,7 +1142,7 @@
     .auth-left .title-anim  { animation: authSlideLeft .7s ease .15s both; }
     .auth-left .stats-anim  { animation: authSlideLeft .7s ease .3s both; }
     .auth-left .feat-anim   { animation: authSlideLeft .7s ease .45s both; }
-    .auth-box               { animation: authFadeIn .6s ease .2s both; }
+    .auth-box               { animation: none !important; }
   </style>
 
   <script>
@@ -1380,11 +1277,63 @@
     }
   </style>
 
+  <!-- POPUP THÔNG BÁO HỖ TRỢ -->
+  <div id="supportLeavePopup" style="display:none;position:fixed;inset:0;background:rgba(8,10,24,.78);z-index:10001;overflow-y:auto;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
+    <div style="max-width:440px;margin:12vh auto 2rem;border-radius:22px;overflow:hidden;border:1px solid rgba(245,215,110,.35);box-shadow:0 28px 70px rgba(0,0,0,.5);animation:policyPopIn .4s cubic-bezier(.22,1,.36,1) both">
+      <div style="background:linear-gradient(145deg,#0f172a 0%,#1e3a5f 100%);padding:1.55rem 1.4rem 1.3rem;color:#fff8eb;position:relative;overflow:hidden">
+        <button type="button" onclick="closeSupportLeavePopup()" style="position:absolute;top:.9rem;right:.9rem;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff8eb;width:32px;height:32px;border-radius:50%;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2" aria-label="Đóng">✕</button>
+        <div style="display:flex;align-items:center;gap:.9rem;position:relative;z-index:1">
+          <div style="width:50px;height:50px;border-radius:50%;flex-shrink:0;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem">📢</div>
+          <div>
+            <div style="font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.7);margin-bottom:.25rem">DHDT LMS</div>
+            <div style="font-family:Georgia,'Times New Roman',serif;font-size:1.3rem;font-weight:700;letter-spacing:.01em;color:#fff8eb">Thông báo hỗ trợ web</div>
+            <div style="font-size:.8rem;color:rgba(247,241,230,.72);margin-top:.25rem">Áp dụng từ 16/8 đến 22/8</div>
+          </div>
+        </div>
+      </div>
+      <div style="background:linear-gradient(180deg,#fffaf3 0%,#fff 55%);padding:1.4rem 1.35rem 1.35rem;display:flex;flex-direction:column;gap:.9rem">
+        <p style="margin:0;font-size:.9rem;color:#3f2a1e;line-height:1.75">
+          Từ ngày <b style="color:#c2410c">16/8</b> đến ngày <b style="color:#c2410c">22/8</b>, Admin <b>Trần Cường</b> <b style="color:#9a031e">không hỗ trợ về web</b>.
+        </p>
+        <div style="background:linear-gradient(135deg,#fff8eb,#fff4d6);border:1px solid rgba(232,93,4,.35);border-radius:12px;padding:.9rem 1rem;font-size:.88rem;color:#7c2d12;line-height:1.7;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)">
+          Vui lòng liên hệ Admin <b style="color:#9a031e">Quốc Toàn</b> để được giải quyết trong thời gian trên.
+        </div>
+        <p style="margin:0;font-size:.84rem;color:#78716c;line-height:1.65">
+          Sau thời gian trên, Admin Trần Cường trở lại hoạt động bình thường.
+        </p>
+        <a href="https://zalo.me/84969795482" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;gap:.55rem;text-decoration:none;background:linear-gradient(135deg,#0068ff,#0052cc);color:#fff;font-size:.92rem;font-weight:700;padding:.8rem 1rem;border-radius:12px;box-shadow:0 4px 14px rgba(0,104,255,.3)">
+          <svg width="18" height="18" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="12" fill="white" fill-opacity="0.2"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-size="24" font-weight="900" fill="white" font-family="Arial,sans-serif">Z</text></svg>
+          Liên hệ Zalo Quốc Toàn
+        </a>
+        <button type="button" onclick="closeSupportLeavePopup()" style="width:100%;padding:.85rem;font-size:.92rem;font-weight:800;border:none;border-radius:12px;color:#fff;cursor:pointer;background:linear-gradient(135deg,#e85d04 0%,#9a031e 55%,#7c2d12 100%);box-shadow:0 8px 22px rgba(232,93,4,.38)">
+          Đã hiểu
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    function isSupportLeaveActive(){
+      return new Date() <= new Date(2026, 7, 22, 23, 59, 59);
+    }
+    function showSupportLeavePopup(){
+      var el = document.getElementById('supportLeavePopup');
+      if (el && isSupportLeaveActive()) el.style.display = 'block';
+    }
+    function closeSupportLeavePopup(){
+      var el = document.getElementById('supportLeavePopup');
+      if (!el) return;
+      el.style.transition = 'opacity .25s';
+      el.style.opacity = '0';
+      setTimeout(function(){ el.style.display='none'; el.style.opacity=''; }, 250);
+    }
+
     (function(){
       // Chỉ hiện 1 lần — dùng localStorage để nhớ
       if(!localStorage.getItem('policyAccepted')){
         document.getElementById('policyPopup').style.display = 'block';
+      } else {
+        showSupportLeavePopup();
       }
     })();
     function acceptPolicy(){
@@ -1392,8 +1341,13 @@
       var el = document.getElementById('policyPopup');
       el.style.transition = 'opacity .3s';
       el.style.opacity = '0';
-      setTimeout(function(){ el.style.display='none'; el.style.opacity=''; }, 300);
+      setTimeout(function(){
+        el.style.display='none';
+        el.style.opacity='';
+        showSupportLeavePopup();
+      }, 300);
     }
   </script>
 
 </body>
+</html>

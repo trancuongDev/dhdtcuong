@@ -8,352 +8,1198 @@
   <link rel="icon" type="image/png" href="icons/icon-192.png"/>
   <link rel="apple-touch-icon" href="icons/icon-192.png"/>
   <link rel="manifest" href="manifest.json"/>
-  <meta name="theme-color" content="#4f46e5"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <meta name="theme-color" content="#0f172a"/>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f172a;
+      --bg2: #1e293b;
+      --bg3: #334155;
+      --surface: rgba(255,255,255,.05);
+      --surface-hover: rgba(255,255,255,.09);
+      --border: rgba(255,255,255,.1);
+      --text: #f1f5f9;
+      --text-2: #94a3b8;
+      --text-3: #64748b;
+      --accent: #3b82f6;
+      --accent-2: #2563eb;
+      --orange: #f97316;
+      --orange-2: #ea580c;
+      --green: #10b981;
+      --gold: #f59e0b;
+      --radius: 16px;
+      --font: 'Be Vietnam Pro', system-ui, sans-serif;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent) var(--bg2);
+    }
+    html::-webkit-scrollbar { width: 6px; }
+    html::-webkit-scrollbar-track { background: var(--bg2); }
+    html::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    a { text-decoration: none; color: inherit; }
+    img { display: block; max-width: 100%; }
+    button { font: inherit; cursor: pointer; border: none; background: none; }
+
+    /* ─── GRID BACKGROUND ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    /* ─── GLOW ORBS ─── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: .35;
+    }
+    .orb-1 { width: 500px; height: 500px; background: #3b82f6; top: -150px; right: -100px; }
+    .orb-2 { width: 400px; height: 400px; background: #f97316; bottom: 10%; left: -120px; }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 200;
+      padding: .85rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      background: rgba(15,23,42,.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      transition: background .3s;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--text);
+      flex-shrink: 0;
+    }
+    .nav-brand img {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      border: 1px solid rgba(59,130,246,.5);
+    }
+    .nav-links-desktop {
+      display: flex;
+      align-items: center;
+      gap: .25rem;
+    }
+    .nav-links-desktop a {
+      padding: .45rem .85rem;
+      border-radius: 8px;
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--text-2);
+      transition: color .2s, background .2s;
+    }
+    .nav-links-desktop a:hover {
+      color: var(--text);
+      background: var(--surface-hover);
+    }
+    .nav-right { display: flex; align-items: center; gap: .65rem; }
+    .btn-nav {
+      padding: .5rem 1.1rem;
+      border-radius: 8px;
+      font-size: .85rem;
+      font-weight: 700;
+      background: var(--accent);
+      color: #fff;
+      transition: background .2s, transform .15s;
+      white-space: nowrap;
+    }
+    .btn-nav:hover { background: var(--accent-2); transform: translateY(-1px); }
+
+    /* Mobile nav toggle */
+    .nav-toggle-btn {
+      display: none;
+      width: 38px; height: 38px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      align-items: center;
+      justify-content: center;
+    }
+    .nav-mobile-menu {
+      display: none;
+      position: fixed;
+      top: 57px; left: 0; right: 0;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: .75rem 1rem;
+      flex-direction: column;
+      gap: .25rem;
+      z-index: 199;
+    }
+    .nav-mobile-menu.open { display: flex; }
+    .nav-mobile-menu a {
+      padding: .75rem 1rem;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--text-2);
+      transition: color .2s, background .2s;
+    }
+    .nav-mobile-menu a:hover { color: var(--text); background: var(--surface-hover); }
+
+    @media (max-width: 768px) {
+      nav { padding: .75rem 1rem; }
+      .nav-links-desktop { display: none; }
+      .nav-toggle-btn { display: flex; }
+      .btn-nav { font-size: .8rem; padding: .45rem .85rem; }
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 7rem 1.5rem 4rem;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .38rem 1rem;
+      border-radius: 999px;
+      background: rgba(59,130,246,.15);
+      border: 1px solid rgba(59,130,246,.35);
+      font-size: .78rem;
+      font-weight: 700;
+      color: #93c5fd;
+      letter-spacing: .04em;
+      margin-bottom: 1.5rem;
+      animation: fadeUp .5s ease both;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #3b82f6;
+      box-shadow: 0 0 8px #3b82f6;
+    }
+    .hero-title {
+      font-size: clamp(2.4rem, 6vw, 4.2rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -.03em;
+      margin-bottom: 1.25rem;
+      animation: fadeUp .55s .05s ease both;
+    }
+    .hero-title .accent-blue { color: #60a5fa; }
+    .hero-title .accent-orange { color: #fb923c; }
+    .hero-sub {
+      font-size: 1.05rem;
+      color: var(--text-2);
+      max-width: 520px;
+      line-height: 1.75;
+      margin-bottom: 2.25rem;
+      animation: fadeUp .6s .1s ease both;
+    }
+    .hero-btns {
+      display: flex;
+      gap: .85rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeUp .65s .15s ease both;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .9rem 1.8rem;
+      border-radius: 10px;
+      font-size: .95rem;
+      font-weight: 700;
+      background: var(--accent);
+      color: #fff;
+      transition: background .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 4px 24px rgba(59,130,246,.4);
+    }
+    .btn-primary:hover {
+      background: var(--accent-2);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(59,130,246,.5);
+    }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .9rem 1.8rem;
+      border-radius: 10px;
+      font-size: .95rem;
+      font-weight: 700;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      transition: background .2s, transform .15s;
+    }
+    .btn-secondary:hover {
+      background: var(--surface-hover);
+      transform: translateY(-2px);
+    }
+    .btn-primary svg, .btn-secondary svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    .scroll-hint {
+      margin-top: 3.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .35rem;
+      color: var(--text-3);
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      animation: fadeUp .7s .3s ease both;
+    }
+    .scroll-hint svg { animation: bounce 2s ease-in-out infinite; }
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+
+    @media (max-width: 640px) {
+      .hero-btns { flex-direction: column; align-items: stretch; }
+      .btn-primary, .btn-secondary { justify-content: center; }
+    }
+
+    /* ─── STATS ─── */
+    .stats {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+      padding: 1rem 2rem 4rem;
+    }
+    .stat {
+      text-align: center;
+    }
+    .stat-num {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+      letter-spacing: -.03em;
+    }
+    .stat-num span { color: var(--accent); }
+    .stat-label {
+      font-size: .78rem;
+      color: var(--text-3);
+      font-weight: 500;
+      margin-top: .3rem;
+    }
+    .stats-divider {
+      width: 1px;
+      background: var(--border);
+      align-self: stretch;
+    }
+    @media (max-width: 640px) {
+      .stats { gap: 2rem; }
+      .stats-divider { display: none; }
+    }
+
+    /* ─── SECTION HEADER ─── */
+    .section-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+    .section-header {
+      text-align: center;
+      padding-bottom: 2.5rem;
+    }
+    .section-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .32rem .85rem;
+      border-radius: 999px;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      margin-bottom: .85rem;
+    }
+    .section-title {
+      font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+      font-weight: 800;
+      letter-spacing: -.025em;
+      line-height: 1.2;
+      margin-bottom: .6rem;
+    }
+    .section-sub {
+      font-size: .93rem;
+      color: var(--text-2);
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* ─── REVEAL ─── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity .65s ease, transform .65s ease;
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ─── FEATURES ─── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .feat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      transition: background .2s, border-color .2s, transform .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .feat-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, transparent 0%, rgba(59,130,246,.06) 100%);
+      opacity: 0;
+      transition: opacity .3s;
+    }
+    .feat-card:hover {
+      background: var(--surface-hover);
+      border-color: rgba(59,130,246,.3);
+      transform: translateY(-3px);
+    }
+    .feat-card:hover::after { opacity: 1; }
+    .feat-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      font-size: 1.35rem;
+    }
+    .feat-title {
+      font-size: .97rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: .4rem;
+    }
+    .feat-desc {
+      font-size: .84rem;
+      color: var(--text-2);
+      line-height: 1.65;
+    }
+
+    /* ─── TEACHER CARD ─── */
+    .teacher-card {
+      display: flex;
+      align-items: stretch;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      gap: 0;
+    }
+    .teacher-img {
+      flex: 0 0 320px;
+      position: relative;
+      overflow: hidden;
+      min-height: 340px;
+    }
+    .teacher-img img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      transition: transform .5s ease;
+    }
+    .teacher-card:hover .teacher-img img { transform: scale(1.04); }
+    .teacher-img-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 60%, var(--bg2) 100%);
+    }
+    .teacher-live {
+      position: absolute;
+      top: 1rem; left: 1rem;
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .32rem .75rem;
+      border-radius: 999px;
+      font-size: .72rem;
+      font-weight: 700;
+      background: rgba(15,23,42,.7);
+      border: 1px solid rgba(16,185,129,.4);
+      color: #6ee7b7;
+      backdrop-filter: blur(8px);
+    }
+    .teacher-live-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 0 0 rgba(16,185,129,.7);
+      animation: livepulse 1.8s ease-out infinite;
+    }
+    @keyframes livepulse {
+      0% { box-shadow: 0 0 0 0 rgba(16,185,129,.65); }
+      70% { box-shadow: 0 0 0 7px rgba(16,185,129,0); }
+      100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+    }
+    .teacher-body {
+      flex: 1;
+      padding: 2.2rem 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1rem;
+    }
+    .teacher-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #60a5fa;
+    }
+    .teacher-name {
+      font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+      font-weight: 800;
+      letter-spacing: -.03em;
+      line-height: 1.1;
+      color: var(--text);
+    }
+    .teacher-role {
+      font-size: .88rem;
+      color: var(--text-2);
+      line-height: 1.55;
+    }
+    .teacher-points {
+      display: flex;
+      flex-direction: column;
+      gap: .6rem;
+    }
+    .teacher-point {
+      display: flex;
+      align-items: flex-start;
+      gap: .65rem;
+      font-size: .88rem;
+      color: var(--text-2);
+      line-height: 1.5;
+    }
+    .teacher-point-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+      margin-top: .38rem;
+    }
+    .teacher-point b { color: var(--text); font-weight: 700; }
+    .teacher-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .8rem 1.5rem;
+      border-radius: 10px;
+      font-size: .9rem;
+      font-weight: 700;
+      background: var(--accent);
+      color: #fff;
+      width: fit-content;
+      transition: background .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 4px 20px rgba(59,130,246,.35);
+    }
+    .teacher-cta:hover {
+      background: var(--accent-2);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(59,130,246,.45);
+    }
+    .teacher-cta svg { width: 16px; height: 16px; }
+    @media (max-width: 780px) {
+      .teacher-card { flex-direction: column; }
+      .teacher-img { flex: none; min-height: 240px; }
+      .teacher-img-overlay { background: linear-gradient(180deg, transparent 60%, var(--bg2) 100%); }
+      .teacher-body { padding: 1.6rem 1.35rem; }
+    }
+
+    /* ─── CITY GRID ─── */
+    .city-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: .75rem;
+    }
+    .city-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: .9rem 1rem;
+      transition: background .2s, transform .2s;
+    }
+    .city-card:hover {
+      background: var(--surface-hover);
+      transform: translateY(-2px);
+    }
+    .city-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .5rem;
+    }
+    .city-name { font-size: .88rem; font-weight: 700; color: var(--text); }
+    .city-count { font-size: .82rem; font-weight: 800; }
+    .city-bar-bg {
+      background: rgba(255,255,255,.07);
+      border-radius: 20px;
+      height: 5px;
+      overflow: hidden;
+    }
+    .city-bar {
+      height: 100%;
+      border-radius: 20px;
+      transition: width 1.2s ease;
+    }
+    .city-pct {
+      font-size: .68rem;
+      color: var(--text-3);
+      margin-top: .3rem;
+      font-weight: 500;
+    }
+
+    /* ─── HONOR ─── */
+    .honor-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    .honor-avatars {
+      display: flex;
+      align-items: center;
+    }
+    .honor-av {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      border: 2.5px solid var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 800;
+      color: #fff;
+      margin-left: -10px;
+    }
+    .honor-av:first-child { margin-left: 0; }
+    .honor-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .7rem 1.4rem;
+      border-radius: 9px;
+      font-size: .88rem;
+      font-weight: 700;
+      background: var(--accent);
+      color: #fff;
+      transition: background .2s, transform .15s;
+    }
+    .honor-btn:hover { background: var(--accent-2); transform: translateY(-1px); }
+
+    /* ─── CTA ─── */
+    .cta-box {
+      background: linear-gradient(135deg, rgba(59,130,246,.18) 0%, rgba(249,115,22,.12) 100%);
+      border: 1px solid rgba(59,130,246,.25);
+      border-radius: 20px;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+
+    /* ─── FAB ─── */
+    .fab-wrap {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+    }
+    .fab-main-btn {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(59,130,246,.5);
+      transition: background .2s, transform .2s, box-shadow .2s;
+    }
+    .fab-main-btn:hover { background: var(--accent-2); transform: scale(1.08); }
+    .fab-main-btn svg { width: 22px; height: 22px; transition: transform .4s cubic-bezier(.34,1.4,.64,1); }
+    .fab-wrap.open .fab-main-btn svg { transform: rotate(225deg); }
+    .fab-items {
+      position: absolute;
+      bottom: calc(100% + .75rem);
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      align-items: flex-end;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity .25s ease, transform .25s ease;
+    }
+    .fab-wrap.open .fab-items { pointer-events: auto; opacity: 1; transform: none; }
+    .fab-item-btn {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      padding: .55rem .9rem .55rem .7rem;
+      border-radius: 999px;
+      font-size: .82rem;
+      font-weight: 700;
+      color: #fff;
+      text-decoration: none;
+      white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,.3);
+      transition: filter .2s, transform .15s;
+    }
+    .fab-item-btn:hover { filter: brightness(1.12); transform: translateX(-3px); }
+    .fab-item-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    /* ─── FOOTER ─── */
+    .footer {
+      position: relative;
+      z-index: 1;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      padding: 3rem 2rem 0;
+    }
+    .footer-grid {
+      max-width: 1080px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.3fr 1fr 1fr;
+      gap: 2.5rem;
+      padding-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .footer-col { display: flex; flex-direction: column; gap: .85rem; }
+    .footer-label {
+      font-size: .7rem;
+      font-weight: 800;
+      color: var(--text-3);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: .15rem;
+    }
+    .footer-link {
+      font-size: .82rem;
+      color: var(--text-2);
+      transition: color .2s;
+      line-height: 1.65;
+    }
+    .footer-link:hover { color: var(--text); }
+    .footer-social-row { display: flex; gap: .5rem; }
+    .footer-social-btn {
+      width: 38px; height: 38px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      transition: border-color .2s, transform .2s, background .2s;
+    }
+    .footer-social-btn:hover { border-color: var(--accent); transform: translateY(-3px); background: var(--surface-hover); }
+    .footer-online {
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      padding: .32rem .75rem;
+      border-radius: 999px;
+      background: rgba(16,185,129,.12);
+      border: 1px solid rgba(16,185,129,.3);
+      font-size: .72rem;
+      font-weight: 700;
+      color: #6ee7b7;
+      width: fit-content;
+    }
+    .footer-online-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: livepulse 2s ease-out infinite;
+    }
+    .footer-bottom {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 1.25rem 0 1.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      font-size: .75rem;
+      color: var(--text-3);
+    }
+    .footer-dev-link { color: #60a5fa; font-weight: 700; transition: color .2s; }
+    .footer-dev-link:hover { color: var(--text); }
+    @media (max-width: 760px) {
+      .footer { padding: 2rem 1rem 0; }
+      .footer-grid { grid-template-columns: 1fr 1fr; gap: 1.75rem; }
+      .footer-bottom { flex-direction: column; text-align: center; }
+    }
+    @media (max-width: 480px) {
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+
+    section + section,
+    section + div { margin-top: 6rem; }
+  </style>
 </head>
 <body>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#0a0820;color:#fff;overflow-x:hidden}
-a{text-decoration:none;color:inherit}
 
-/* ══ PARTICLES ══ */
-#particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-.star{position:absolute;background:#fff;border-radius:50%;animation:twinkle ease-in-out infinite}
-@keyframes twinkle{0%,100%{opacity:.1;transform:scale(.8)}50%{opacity:.8;transform:scale(1.2)}}
-.particle{position:absolute;border-radius:50%;opacity:0;animation:pfloat linear infinite}
-@keyframes pfloat{0%{opacity:0;transform:translateY(100vh)}15%{opacity:.6}85%{opacity:.3}100%{opacity:0;transform:translateY(-5vh)}}
-
-/* ══ NAV ══ */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:.85rem 2rem;display:flex;align-items:center;justify-content:space-between;background:rgba(10,8,32,.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.08)}
-.nav-brand{display:flex;align-items:center;gap:.65rem;font-weight:900;font-size:1.1rem}
-.nav-brand img{width:32px;height:32px;border-radius:8px}
-.nav-links{display:flex;align-items:center;gap:.35rem}
-.nav-link{padding:.45rem .85rem;border-radius:8px;font-size:.85rem;font-weight:600;color:rgba(255,255,255,.65);transition:all .18s}
-.nav-link:hover{background:rgba(255,255,255,.08);color:#fff}
-.nav-btn{padding:.5rem 1.2rem;border-radius:10px;font-size:.88rem;font-weight:700;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 14px rgba(99,102,241,.4)}
-.nav-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
-@media(max-width:640px){.nav-links .nav-link{display:none}}
-
-/* ══ HERO ══ */
-.hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:6rem 1.5rem 4rem}
-.hero-badge{display:inline-flex;align-items:center;gap:.45rem;background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.4);border-radius:20px;padding:.4rem 1rem;font-size:.8rem;font-weight:700;color:#a5b4fc;margin-bottom:1.5rem;animation:fadeUp .6s ease both}
-@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-.hero-title{font-size:clamp(2.2rem,6vw,4rem);font-weight:900;line-height:1.1;letter-spacing:-.5px;margin-bottom:1.25rem;animation:fadeUp .7s .1s ease both}
-.hero-title .grad{background:linear-gradient(135deg,#a5b4fc,#6366f1,#818cf8,#c4b5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero-title .gold{background:linear-gradient(135deg,#fde68a,#f59e0b,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero-sub{font-size:1.1rem;color:rgba(255,255,255,.6);max-width:560px;line-height:1.75;margin-bottom:2.25rem;animation:fadeUp .7s .2s ease both}
-.hero-btns{display:flex;gap:.85rem;flex-wrap:wrap;justify-content:center;animation:fadeUp .7s .3s ease both}
-.btn-hero-primary{display:inline-flex;align-items:center;gap:.5rem;padding:.85rem 2rem;border-radius:14px;font-size:1rem;font-weight:800;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;box-shadow:0 8px 28px rgba(99,102,241,.45);transition:all .2s}
-.btn-hero-primary:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(99,102,241,.55);filter:brightness(1.1)}
-.btn-hero-outline{display:inline-flex;align-items:center;gap:.5rem;padding:.85rem 2rem;border-radius:14px;font-size:1rem;font-weight:700;border:1.5px solid rgba(255,255,255,.2);color:rgba(255,255,255,.85);background:rgba(255,255,255,.05);backdrop-filter:blur(8px);transition:all .2s}
-.btn-hero-outline:hover{border-color:rgba(255,255,255,.45);background:rgba(255,255,255,.1);transform:translateY(-2px)}
-</style>
-<style>
-/* ══ STATS STRIP ══ */
-.stats-strip{position:relative;z-index:1;display:flex;justify-content:center;gap:2.5rem;flex-wrap:wrap;padding:2rem 1.5rem 3.5rem;animation:fadeUp .7s .4s ease both}
-.stat-chip{text-align:center}
-.stat-chip-num{font-size:2rem;font-weight:900;background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
-.stat-chip-label{font-size:.78rem;color:rgba(255,255,255,.5);font-weight:600;margin-top:.2rem}
-
-/* ══ DIVIDER ══ */
-.section-divider{position:relative;z-index:1;text-align:center;padding:0 1.5rem .75rem}
-.section-tag{display:inline-flex;align-items:center;gap:.45rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:.35rem .9rem;font-size:.78rem;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.5px;text-transform:uppercase}
-.section-title{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:900;margin-top:.65rem;letter-spacing:-.3px}
-.section-sub{font-size:.95rem;color:rgba(255,255,255,.5);margin-top:.5rem;max-width:500px;margin-left:auto;margin-right:auto;line-height:1.7}
-
-/* ══ FEATURES ══ */
-.features{position:relative;z-index:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.1rem;max-width:1000px;margin:2rem auto 0;padding:0 1.5rem}
-.feat-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:1.5rem 1.4rem;transition:all .25s;cursor:default}
-.feat-card:hover{background:rgba(255,255,255,.09);border-color:rgba(99,102,241,.4);transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.3)}
-.feat-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1rem;flex-shrink:0}
-.feat-title{font-size:1rem;font-weight:800;margin-bottom:.4rem}
-.feat-desc{font-size:.85rem;color:rgba(255,255,255,.5);line-height:1.65}
-
-/* ══ HONOR PREVIEW ══ */
-.honor-section{position:relative;z-index:1;max-width:820px;margin:4rem auto 0;padding:0 1.5rem}
-.honor-preview{background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(79,70,229,.1));border:1px solid rgba(99,102,241,.3);border-radius:20px;padding:2rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap}
-.honor-avatars{display:flex;gap:-.5rem}
-.honor-av{width:48px;height:48px;border-radius:50%;border:2.5px solid #1e1b4b;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;color:#fff;margin-left:-10px}
-.honor-av:first-child{margin-left:0}
-
-/* ══ CTA ══ */
-.cta-section{position:relative;z-index:1;text-align:center;padding:5rem 1.5rem 4rem;max-width:700px;margin:0 auto}
-.cta-box{background:linear-gradient(135deg,rgba(99,102,241,.2),rgba(124,58,237,.15));border:1px solid rgba(99,102,241,.35);border-radius:24px;padding:3rem 2rem}
-
-/* ══ FOOTER ══ */
-footer{position:relative;z-index:1;text-align:center;padding:2rem 1.5rem 3rem;border-top:1px solid rgba(255,255,255,.07);font-size:.8rem;color:rgba(255,255,255,.3);line-height:2}
-footer b{color:rgba(255,255,255,.5)}
-
-/* ══ SCROLL REVEAL ══ */
-.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
-.reveal.visible{opacity:1;transform:translateY(0)}
-
-@media(max-width:640px){
-  .hero-btns{flex-direction:column;align-items:center}
-  .btn-hero-primary,.btn-hero-outline{width:100%;justify-content:center}
-  .stats-strip{gap:1.5rem}
-  .honor-preview{flex-direction:column;text-align:center}
-}
-</style>
-
-<div id="particles"></div>
+<div class="orb orb-1" aria-hidden="true"></div>
+<div class="orb orb-2" aria-hidden="true"></div>
 
 <!-- NAV -->
-<nav>
-  <div class="nav-brand">
+<nav id="mainNav">
+  <a class="nav-brand" href="index.html">
     <img src="icons/icon-192.png" alt="DHDT"/>
     DHDT LMS
+  </a>
+  <div class="nav-links-desktop">
+    <a href="index.html">Trang chủ</a>
+    <a href="#features">Tính năng</a>
+    <a href="library.html">Thư viện</a>
+    <a href="honor.html">Vinh danh</a>
+    <a href="policy.html">Chính sách</a>
   </div>
-  <div class="nav-links">
-    <a class="nav-link" href="index.html">🏠 Trang chủ</a>
-    <a class="nav-link" href="#features">Tính năng</a>
-    <a class="nav-link" href="honor.html">Vinh danh</a>
-    <a class="nav-link" href="policy.html">Chính sách</a>
-    <a class="nav-btn" href="login.html">Đăng nhập</a>
+  <div class="nav-right">
+    <a class="btn-nav" href="login.html">Đăng nhập</a>
+    <button class="nav-toggle-btn" id="navToggle" aria-label="Menu" aria-expanded="false">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <path d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+    </button>
   </div>
 </nav>
+<div class="nav-mobile-menu" id="mobileMenu" role="navigation" aria-label="Mobile menu">
+  <a href="index.html">Trang chủ</a>
+  <a href="#features">Tính năng</a>
+  <a href="library.html">Thư viện</a>
+  <a href="honor.html">Vinh danh</a>
+  <a href="policy.html">Chính sách</a>
+</div>
+<script>
+(function(){
+  var btn = document.getElementById('navToggle');
+  var menu = document.getElementById('mobileMenu');
+  btn.addEventListener('click', function(){
+    var open = menu.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open);
+  });
+  document.addEventListener('click', function(e){
+    if (!btn.contains(e.target) && !menu.contains(e.target)) {
+      menu.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  });
+  menu.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){ menu.classList.remove('open'); });
+  });
+})();
+</script>
 
 <!-- HERO -->
-<section class="hero">
-  <div class="hero-badge">✨ Hệ thống học tập thế hệ mới</div>
+<section class="hero" aria-label="Hero">
+  <div class="hero-badge">Hệ thống học tập trực tuyến</div>
   <h1 class="hero-title">
-    Chinh phục <span class="gold">Toán</span><br/>
-    cùng <span class="grad">DHDT LMS</span>
+    Chinh phục <span class="accent-blue">Toán</span><br/>
+    học mọi lúc, <span class="accent-orange">mọi nơi</span>
   </h1>
   <p class="hero-sub">
-    Nền tảng học Toán trực tuyến với video bài giảng HD, tài liệu chọn lọc,
-    hệ thống bài tập thông minh và theo dõi tiến độ học tập realtime.
+    Video bài giảng HD, tài liệu chọn lọc và bài tập thông minh —
+    đồng hành cùng bạn trên hành trình luyện thi THPT &amp; VSAT.
   </p>
   <div class="hero-btns">
-    <a class="btn-hero-primary" href="login.html">🚀 Đăng nhập ngay</a>
-    <a class="btn-hero-outline" href="honor.html">🏆 Bảng vinh danh</a>
+    <a class="btn-primary" href="login.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      Đăng nhập ngay
+    </a>
+    <a class="btn-secondary" href="honor.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M5 4H3a2 2 0 0 0 2 4"/><path d="M19 4h2a2 2 0 0 1-2 4"/></svg>
+      Bảng vinh danh
+    </a>
   </div>
-
-  <!-- Mũi tên chỉ xuống -->
-  <a href="#features" style="margin-top:3rem;display:flex;flex-direction:column;align-items:center;gap:.3rem;color:rgba(255,255,255,.35);font-size:.75rem;font-weight:600;letter-spacing:.5px;text-decoration:none;transition:color .2s;animation:fadeUp .7s .6s ease both" onmouseover="this.style.color='rgba(255,255,255,.7)'" onmouseout="this.style.color='rgba(255,255,255,.35)'">
+  <a href="#features" class="scroll-hint" aria-label="Cuộn xuống">
     <span>Khám phá</span>
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="animation:arrowBounce 1.5s ease-in-out infinite">
-      <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 5v14M5 12l7 7 7-7"/>
     </svg>
   </a>
 </section>
 
-<style>
-@keyframes arrowBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
-</style>
-
 <!-- STATS -->
-<div class="stats-strip reveal">
-  <div class="stat-chip"><div class="stat-chip-num">3000+</div><div class="stat-chip-label">Học viên tin tưởng</div></div>
-  <div class="stat-chip"><div class="stat-chip-num">100+</div><div class="stat-chip-label">Video bài giảng</div></div>
-  <div class="stat-chip"><div class="stat-chip-num">Hàng trăm</div><div class="stat-chip-label">Tài liệu chọn lọc</div></div>
-  <div class="stat-chip"><div class="stat-chip-num">10+</div><div class="stat-chip-label">Điểm 10 THPT QG</div></div>
+<div class="stats reveal" aria-label="Thống kê">
+  <div class="stat"><div class="stat-num">3000<span>+</span></div><div class="stat-label">Học viên tin tưởng</div></div>
+  <div class="stats-divider" aria-hidden="true"></div>
+  <div class="stat"><div class="stat-num">100<span>+</span></div><div class="stat-label">Video bài giảng</div></div>
+  <div class="stats-divider" aria-hidden="true"></div>
+  <div class="stat"><div class="stat-num">10<span>+</span></div><div class="stat-label">Điểm 10 THPT QG</div></div>
+  <div class="stats-divider" aria-hidden="true"></div>
+  <div class="stat"><div class="stat-num">93<span>+</span></div><div class="stat-label">Học viên vinh danh</div></div>
 </div>
 
-<!-- ABOUT TEACHER -->
-<div style="position:relative;z-index:1;max-width:900px;margin:0 auto 0;padding:0 1.5rem" class="reveal">
-  <div style="background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.1);border-radius:24px;overflow:hidden;display:flex;align-items:stretch;flex-wrap:wrap">
-    <div style="flex:0 0 340px;min-height:320px;position:relative;overflow:hidden">
-      <img src="teacher.jpg" alt="Thầy Duy Hoàng" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block;filter:brightness(.9)"/>
-      <div style="position:absolute;inset:0;background:linear-gradient(to right,transparent 60%,rgba(10,8,32,.95))"></div>
-      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,8,32,.7) 0%,transparent 40%)"></div>
-      <div style="position:absolute;top:1rem;left:1rem;display:flex;align-items:center;gap:.4rem;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:.3rem .75rem;font-size:.75rem;font-weight:700;color:#fff">
-        <span style="width:7px;height:7px;background:#10b981;border-radius:50%;animation:twinkle 1.2s ease-in-out infinite;flex-shrink:0"></span>
-        Đang giảng dạy
-      </div>
+<!-- TEACHER -->
+<div class="section-wrap reveal" style="margin-top:2rem">
+  <div class="teacher-card">
+    <div class="teacher-img">
+      <img src="teacher.jpg" alt="Thầy Duy Hoàng" loading="lazy"/>
+      <div class="teacher-img-overlay" aria-hidden="true"></div>
+      <div class="teacher-live"><span class="teacher-live-dot" aria-hidden="true"></span>Đang giảng dạy</div>
     </div>
-    <div style="flex:1;min-width:260px;padding:2.25rem 2rem;display:flex;flex-direction:column;justify-content:center;gap:1rem">
+    <div class="teacher-body">
       <div>
-        <h2 style="font-size:1.7rem;font-weight:900;line-height:1.2;margin-bottom:.4rem">Anh Duy Hoàng</h2>
+        <div class="teacher-tag">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+          Giáo viên đồng hành
+        </div>
+        <h2 class="teacher-name">Anh Duy Hoàng</h2>
+        <p class="teacher-role">Giáo viên Toán — luyện thi THPT Quốc Gia &amp; VSAT</p>
       </div>
-      <div style="display:flex;flex-direction:column;gap:.55rem">
-        <div style="display:flex;align-items:center;gap:.75rem;padding:.6rem .85rem;background:rgba(255,255,255,.05);border-radius:10px;border:1px solid rgba(255,255,255,.08)">
-          <span style="font-size:1.1rem;flex-shrink:0">🏆</span>
-          <span style="font-size:.85rem;color:rgba(255,255,255,.75)">Học viên đạt <b style="color:#fbbf24">điểm 10</b> THPT Quốc Gia &amp; <b style="color:#fbbf24">150 điểm</b> VSAT Toán</span>
+      <div class="teacher-points">
+        <div class="teacher-point">
+          <span class="teacher-point-dot" aria-hidden="true"></span>
+          <span>Học viên đạt <b>điểm 10</b> THPT Quốc Gia &amp; <b>150 điểm</b> VSAT Toán</span>
         </div>
-        <div style="display:flex;align-items:center;gap:.75rem;padding:.6rem .85rem;background:rgba(255,255,255,.05);border-radius:10px;border:1px solid rgba(255,255,255,.08)">
-          <span style="font-size:1.1rem;flex-shrink:0">👥</span>
-          <span style="font-size:.85rem;color:rgba(255,255,255,.75)">Hơn <b style="color:#fbbf24">3000+ học viên</b> tin tưởng trên khắp cả nước</span>
+        <div class="teacher-point">
+          <span class="teacher-point-dot" aria-hidden="true"></span>
+          <span>Hơn <b>3000+ học viên</b> tin tưởng trên khắp cả nước</span>
         </div>
-        <div style="display:flex;align-items:center;gap:.75rem;padding:.6rem .85rem;background:rgba(255,255,255,.05);border-radius:10px;border:1px solid rgba(255,255,255,.08)">
-          <span style="font-size:1.1rem;flex-shrink:0">💻</span>
-          <span style="font-size:.85rem;color:rgba(255,255,255,.75)">Phương pháp giảng dạy <b style="color:#fbbf24">trực quan, dễ hiểu</b> — học mọi lúc mọi nơi</span>
+        <div class="teacher-point">
+          <span class="teacher-point-dot" aria-hidden="true"></span>
+          <span>Phương pháp <b>trực quan, dễ hiểu</b> — học mọi lúc mọi nơi</span>
         </div>
       </div>
-      <a href="login.html" style="display:inline-flex;align-items:center;gap:.45rem;padding:.7rem 1.5rem;border-radius:12px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-size:.9rem;font-weight:800;width:fit-content;box-shadow:0 4px 16px rgba(99,102,241,.4);transition:all .2s" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
-        🚀 Đăng nhập ngay
+      <a href="login.html" class="teacher-cta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Đăng nhập học ngay
       </a>
     </div>
   </div>
 </div>
 
 <!-- FEATURES -->
-<div class="section-divider reveal" id="features" style="padding-top:1rem">
-  <span class="section-tag">⚡ Tính năng nổi bật</span>
-  <h2 class="section-title">Mọi thứ bạn cần để học giỏi Toán</h2>
-  <p class="section-sub">Từ video bài giảng đến bài tập tự chấm điểm — tất cả trong một nền tảng.</p>
-</div>
-
-<div class="features reveal">
-  <div class="feat-card">
-    <div class="feat-icon" style="background:linear-gradient(135deg,#6366f1,#4f46e5)">🎬</div>
-    <div class="feat-title">Video bài giảng HD</div>
-    <div class="feat-desc">Hàng trăm video bài giảng chất lượng cao, phân loại theo từng chương và dạng bài. Xem lại không giới hạn.</div>
-  </div>
-  <div class="feat-card">
-    <div class="feat-icon" style="background:linear-gradient(135deg,#0ea5e9,#0284c7)">📄</div>
-    <div class="feat-title">Tài liệu chọn lọc</div>
-    <div class="feat-desc">Đề cương, bản tóm tắt lý thuyết và bài tập có lời giải được biên soạn kỹ lưỡng bởi giáo viên.</div>
-  </div>
-  <div class="feat-card">
-    <div class="feat-icon" style="background:linear-gradient(135deg,#10b981,#059669)">📝</div>
-    <div class="feat-title">Bài tập thông minh</div>
-    <div class="feat-desc">Hệ thống bài tập trắc nghiệm, đúng/sai, tự luận với chấm điểm tự động và phản hồi chi tiết.</div>
-  </div>
-  <div class="feat-card">
-    <div class="feat-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">📅</div>
-    <div class="feat-title">Lịch học cá nhân</div>
-    <div class="feat-desc">Theo dõi lịch học theo tuần, nhận thông báo nhắc nhở và cập nhật bài mới từ giáo viên.</div>
-  </div>
-  <div class="feat-card">
-    <div class="feat-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">🏆</div>
-    <div class="feat-title">Bảng vinh danh</div>
-    <div class="feat-desc">Ghi nhận thành tích học viên xuất sắc qua các kỳ thi VSAT và THPT Quốc gia toàn quốc.</div>
-  </div>
-  <div class="feat-card">
-    <div class="feat-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626)">🔒</div>
-    <div class="feat-title">Bảo mật cao</div>
-    <div class="feat-desc">Giám sát hoạt động 24/7, chống gian lận trong thi cử, bảo vệ bản quyền nội dung tuyệt đối.</div>
-  </div>
-</div>
-
-<!-- PHÂN BỐ HỌC VIÊN -->
-<div style="position:relative;z-index:1;max-width:900px;margin:5rem auto 0;padding:0 1.5rem" class="reveal">
-  <div style="text-align:center;margin-bottom:1.75rem">
-    <span style="display:inline-flex;align-items:center;gap:.45rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:.35rem .9rem;font-size:.78rem;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.5px;text-transform:uppercase">🗺️ Phân bố học viên</span>
-    <h2 style="font-size:clamp(1.6rem,4vw,2.2rem);font-weight:900;margin-top:.65rem;letter-spacing:-.3px">Gần <span style="background:linear-gradient(135deg,#fde68a,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">3000 học viên</span> trên cả nước</h2>
-    <p style="font-size:.9rem;color:rgba(255,255,255,.5);margin-top:.5rem">Trải dài từ Bắc vào Nam — mọi tỉnh thành đều có học viên của DHDT LMS</p>
-  </div>
-
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem" id="cityGrid"></div>
-</div>
-
-<script>
-const CITY_DATA = [
-  { city:'Cần Thơ',       count:838, color:['#6366f1','#4f46e5'] },
-  { city:'Vĩnh Long',     count:355, color:['#8b5cf6','#7c3aed'] },
-  { city:'An Giang',      count:332, color:['#10b981','#059669'] },
-  { city:'Đồng Tháp',     count:308, color:['#f59e0b','#d97706'] },
-  { city:'Cà Mau',        count:197, color:['#ec4899','#db2777'] },
-  { city:'TP.HCM',        count:189, color:['#f43f5e','#e11d48'] },
-  { city:'Tây Ninh',      count:87,  color:['#06b6d4','#0891b2'] },
-  { city:'Khánh Hoà',     count:71,  color:['#14b8a6','#0d9488'] },
-  { city:'Hà Nội',        count:63,  color:['#a855f7','#9333ea'] },
-  { city:'Đồng Nai',      count:55,  color:['#84cc16','#65a30d'] },
-  { city:'Gia Lai',       count:55,  color:['#fb923c','#ea580c'] },
-  { city:'Hải Phòng',     count:39,  color:['#38bdf8','#0ea5e9'] },
-  { city:'Đà Nẵng',       count:39,  color:['#34d399','#10b981'] },
-  { city:'Bắc Ninh',      count:39,  color:['#c084fc','#a855f7'] },
-  { city:'Phú Thọ',       count:39,  color:['#fbbf24','#f59e0b'] },
-  { city:'Lâm Đồng',      count:31,  color:['#4ade80','#22c55e'] },
-  { city:'Ninh Bình',     count:31,  color:['#67e8f9','#22d3ee'] },
-  { city:'Hà Tĩnh',       count:24,  color:['#f9a8d4','#ec4899'] },
-  { city:'Huế',           count:24,  color:['#a5b4fc','#6366f1'] },
-  { city:'Tuyên Quang',   count:16,  color:['#86efac','#22c55e'] },
-  { city:'Sơn La',        count:16,  color:['#fcd34d','#f59e0b'] },
-  { city:'Thái Nguyên',   count:16,  color:['#7dd3fc','#38bdf8'] },
-  { city:'Các tỉnh khác', count:87,  color:['#64748b','#475569'] },
-];
-
-const maxCount = CITY_DATA[0].count;
-const grid = document.getElementById('cityGrid');
-CITY_DATA.forEach(d => {
-  const pct = Math.round(d.count / maxCount * 100);
-  const isTop = d.count >= 100;
-  grid.innerHTML += `
-    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:.9rem 1rem;transition:all .2s" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.transform=''">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
-        <span style="font-size:.88rem;font-weight:700;color:#fff">${d.city}</span>
-        <span style="font-size:.82rem;font-weight:900;background:linear-gradient(135deg,${d.color[0]},${d.color[1]});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${d.count.toLocaleString()}</span>
+<section id="features" aria-labelledby="features-title">
+  <div class="section-wrap">
+    <div class="section-header reveal">
+      <div class="section-tag">Tính năng nổi bật</div>
+      <h2 class="section-title" id="features-title">Mọi thứ bạn cần để học giỏi Toán</h2>
+      <p class="section-sub">Từ video bài giảng đến tài liệu chọn lọc — tất cả trong một nền tảng.</p>
+    </div>
+    <div class="features-grid reveal">
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(59,130,246,.15)">🎬</div>
+        <div class="feat-title">Video bài giảng HD</div>
+        <div class="feat-desc">Hàng trăm video chất lượng cao, phân loại theo chương và dạng bài. Xem lại không giới hạn.</div>
       </div>
-      <div style="background:rgba(255,255,255,.08);border-radius:20px;height:5px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${d.color[0]},${d.color[1]});border-radius:20px;transition:width 1.2s ease"></div>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(16,185,129,.15)">📄</div>
+        <div class="feat-title">Tài liệu chọn lọc</div>
+        <div class="feat-desc">Đề cương, tóm tắt lý thuyết và bài tập có lời giải được biên soạn kỹ lưỡng bởi giáo viên.</div>
       </div>
-      <div style="font-size:.68rem;color:rgba(255,255,255,.35);margin-top:.3rem;font-weight:600">${Math.round(d.count/2950*100)}% tổng học viên</div>
-    </div>`;
-});
-</script>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(249,115,22,.15)">✏️</div>
+        <div class="feat-title">Bài tập thông minh</div>
+        <div class="feat-desc">Hệ thống bài tập đa dạng với chấm điểm tự động và phản hồi chi tiết từ giáo viên.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(168,85,247,.15)">📅</div>
+        <div class="feat-title">Lịch học cá nhân</div>
+        <div class="feat-desc">Theo dõi lịch học theo tuần, nhận thông báo nhắc nhở và cập nhật bài mới.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(245,158,11,.15)">🏆</div>
+        <div class="feat-title">Bảng vinh danh</div>
+        <div class="feat-desc">Ghi nhận thành tích học viên xuất sắc qua các kỳ thi VSAT và THPT Quốc gia.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(239,68,68,.15)">🔒</div>
+        <div class="feat-title">Bảo mật cao</div>
+        <div class="feat-desc">Giám sát hoạt động 24/7, chống gian lận, bảo vệ bản quyền nội dung tuyệt đối.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CITY DISTRIBUTION -->
+<section aria-labelledby="city-title">
+  <div class="section-wrap">
+    <div class="section-header reveal">
+      <div class="section-tag">Phân bố học viên</div>
+      <h2 class="section-title" id="city-title">Gần 3000 học viên trên cả nước</h2>
+      <p class="section-sub">Trải dài từ Bắc vào Nam — mọi tỉnh thành đều có học viên của DHDT LMS</p>
+    </div>
+    <div class="city-grid reveal" id="cityGrid"></div>
+  </div>
+</section>
 
 <!-- HONOR PREVIEW -->
-<div class="honor-section reveal" style="margin-top:5rem">
-  <div class="honor-preview">
-    <div>
-      <div style="font-size:.8rem;font-weight:700;color:#a5b4fc;letter-spacing:.5px;text-transform:uppercase;margin-bottom:.5rem">👑 Bảng vinh danh 2026</div>
-      <div style="font-size:1.4rem;font-weight:900;margin-bottom:.4rem">Học viên xuất sắc nhất</div>
-      <div style="font-size:.88rem;color:rgba(255,255,255,.55);line-height:1.6;max-width:380px">Hàng chục học viên đạt điểm 10 THPT Quốc Gia và 150 điểm VSAT Toán trên khắp cả nước.</div>
-      <a href="honor.html" style="display:inline-flex;align-items:center;gap:.45rem;margin-top:1rem;padding:.6rem 1.4rem;border-radius:10px;background:linear-gradient(135deg,#6366f1,#4f46e5);font-size:.88rem;font-weight:700;color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.4);transition:all .2s" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
-        🏆 Xem bảng vinh danh →
-      </a>
-    </div>
-    <div style="text-align:center">
-      <div style="display:flex;align-items:center;justify-content:center;gap:-.5rem;margin-bottom:.75rem">
-        <div class="honor-av" style="background:linear-gradient(135deg,#f59e0b,#d97706)">N</div>
-        <div class="honor-av" style="background:linear-gradient(135deg,#6366f1,#4f46e5)">L</div>
-        <div class="honor-av" style="background:linear-gradient(135deg,#10b981,#059669)">P</div>
-        <div class="honor-av" style="background:linear-gradient(135deg,#ec4899,#db2777)">T</div>
-        <div class="honor-av" style="background:rgba(255,255,255,.15);font-size:.8rem;font-weight:700;color:rgba(255,255,255,.6)">+90</div>
+<section aria-labelledby="honor-title">
+  <div class="section-wrap">
+    <div class="honor-card reveal">
+      <div>
+        <div class="section-tag" style="margin-bottom:.85rem">Bảng vinh danh 2026</div>
+        <h2 class="section-title" id="honor-title" style="text-align:left">Học viên xuất sắc nhất</h2>
+        <p style="font-size:.9rem;color:var(--text-2);line-height:1.65;max-width:400px;margin:.5rem 0 1.25rem">
+          Hàng chục học viên đạt điểm 10 THPT Quốc Gia và 150 điểm VSAT Toán trên khắp cả nước.
+        </p>
+        <a href="honor.html" class="honor-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/></svg>
+          Xem bảng vinh danh
+        </a>
       </div>
-      <div style="font-size:.8rem;color:rgba(255,255,255,.45);font-weight:600">93 học viên vinh danh</div>
+      <div style="text-align:center">
+        <div class="honor-avatars" style="justify-content:center;margin-bottom:.75rem">
+          <div class="honor-av" style="background:linear-gradient(135deg,#f59e0b,#d97706)">N</div>
+          <div class="honor-av" style="background:linear-gradient(135deg,#6366f1,#4f46e5)">L</div>
+          <div class="honor-av" style="background:linear-gradient(135deg,#10b981,#059669)">P</div>
+          <div class="honor-av" style="background:linear-gradient(135deg,#ec4899,#db2777)">T</div>
+          <div class="honor-av" style="background:var(--surface);font-size:.78rem;color:var(--text-2)">+90</div>
+        </div>
+        <div style="font-size:.82rem;color:var(--text-2);font-weight:600">93 học viên vinh danh</div>
+      </div>
     </div>
   </div>
-</div>
+</section>
 
 <!-- CTA -->
-<div class="cta-section reveal">
-  <div class="cta-box">
-    <div style="font-size:3rem;margin-bottom:.75rem">🎯</div>
-    <h2 style="font-size:1.8rem;font-weight:900;margin-bottom:.65rem">Sẵn sàng chinh phục Toán?</h2>
-    <p style="font-size:.95rem;color:rgba(255,255,255,.55);margin-bottom:1.75rem;line-height:1.7">Tham gia cùng hàng trăm học viên đang học tập hiệu quả trên DHDT LMS. Liên hệ Trợ Lý để được cấp tài khoản.</p>
-    <div style="display:flex;gap:.85rem;justify-content:center;flex-wrap:wrap">
-      <a class="btn-hero-primary" href="login.html">🚀 Đăng nhập ngay</a>
-      <a class="btn-hero-outline" href="policy.html" style="font-size:.9rem">📋 Xem chính sách</a>
+<section aria-label="Kêu gọi hành động">
+  <div class="section-wrap" style="padding-bottom:2rem">
+    <div class="cta-box reveal">
+      <h2 style="font-size:clamp(1.7rem,3.5vw,2.3rem);font-weight:800;letter-spacing:-.03em;margin-bottom:.7rem">Sẵn sàng chinh phục Toán cùng DHDT LMS?</h2>
+      <p style="font-size:.93rem;color:var(--text-2);margin-bottom:1.75rem;line-height:1.7;max-width:480px;margin-left:auto;margin-right:auto">
+        Tham gia cùng hàng ngàn học viên đang học tập hiệu quả. Liên hệ Trợ Lý để được cấp tài khoản.
+      </p>
+      <div style="display:flex;gap:.85rem;justify-content:center;flex-wrap:wrap">
+        <a class="btn-primary" href="login.html">Đăng nhập ngay</a>
+        <a class="btn-secondary" href="policy.html" style="font-size:.9rem">Xem chính sách</a>
+      </div>
     </div>
   </div>
+</section>
+
+<!-- FAB -->
+<div class="fab-wrap" id="fabWrap">
+  <div class="fab-items" id="fabItems">
+    <a href="https://zalo.me/84869573231" target="_blank" rel="noopener noreferrer" class="fab-item-btn" style="background:#0068ff" aria-label="Zalo Trần Cường">
+      <svg width="18" height="18" viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect width="48" height="48" rx="12" fill="white" fill-opacity="0.2"/><text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" font-size="22" font-weight="900" fill="white" font-family="Arial,sans-serif">Z</text></svg>
+      Zalo Trần Cường
+    </a>
+    <a href="https://zalo.me/84969795482" target="_blank" rel="noopener noreferrer" class="fab-item-btn" style="background:#0068ff" aria-label="Zalo Quốc Toàn">
+      <svg width="18" height="18" viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect width="48" height="48" rx="12" fill="white" fill-opacity="0.2"/><text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" font-size="22" font-weight="900" fill="white" font-family="Arial,sans-serif">Z</text></svg>
+      Zalo Quốc Toàn
+    </a>
+    <a href="https://www.facebook.com/duyhoangdaytoan" target="_blank" rel="noopener noreferrer" class="fab-item-btn" style="background:#1877f2" aria-label="Facebook">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/></svg>
+      Facebook
+    </a>
+  </div>
+  <button class="fab-main-btn" id="fabToggle" aria-label="Liên hệ" aria-expanded="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+  </button>
 </div>
+<script>
+(function(){
+  var wrap = document.getElementById('fabWrap');
+  var btn = document.getElementById('fabToggle');
+  function setOpen(o){
+    wrap.classList.toggle('open', o);
+    btn.setAttribute('aria-expanded', o);
+    btn.setAttribute('aria-label', o ? 'Đóng' : 'Liên hệ');
+  }
+  btn.addEventListener('click', function(){ setOpen(!wrap.classList.contains('open')); });
+  document.addEventListener('click', function(e){
+    if (wrap.classList.contains('open') && !wrap.contains(e.target)) setOpen(false);
+  });
+})();
+</script>
 
 <!-- FOOTER -->
-<footer>
-  <div style="font-size:1.5rem;margin-bottom:.5rem">📐</div>
-  <div><b>© DHDT LMS</b> — Hệ thống học Toán trực tuyến</div>
-  <div>Bản quyền thuộc về <b>DHDT LMS</b> · Phát triển & điều hành bởi <b>Tr. Cường</b></div>
-  <div style="margin-top:.5rem;font-size:.72rem;opacity:.6">Nghiêm cấm sao chép, phân phối dưới mọi hình thức khi chưa được cho phép.</div>
+<footer class="footer" role="contentinfo">
+  <div class="footer-grid">
+    <div class="footer-col">
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <div style="width:44px;height:44px;border-radius:10px;overflow:hidden;flex-shrink:0;border:1px solid var(--border)">
+          <img src="icons/icon-192.png" alt="Logo" style="width:100%;height:100%;object-fit:cover"/>
+        </div>
+        <div>
+          <div style="font-size:.97rem;font-weight:800;letter-spacing:-.02em">DHDT LMS</div>
+          <div style="font-size:.7rem;color:var(--text-3);margin-top:.1rem">Hệ thống học tập Toán</div>
+        </div>
+      </div>
+      <p class="footer-link" style="max-width:220px">Nền tảng luyện thi Toán thông minh dành cho học viên THPT trên khắp cả nước.</p>
+      <div class="footer-online">
+        <span class="footer-online-dot" aria-hidden="true"></span>
+        Đang hoạt động
+      </div>
+    </div>
+
+    <div class="footer-col">
+      <div class="footer-label">Hỗ trợ</div>
+      <span class="footer-link">Nguyễn Thông, An Thới, Bình Thủy, Cần Thơ</span>
+      <span class="footer-link">Thứ 2 – Chủ nhật · <strong style="color:var(--text)">7:00 – 22:00</strong></span>
+      <a href="policy.html" class="footer-link">Chính sách &amp; Điều khoản</a>
+      <span class="footer-link" style="font-size:.78rem">
+        Phát triển bởi
+        <a href="https://profile.trancuong08.io.vn/" target="_blank" class="footer-dev-link">Tr.Cường08</a>
+        &amp;
+        <a href="https://portfolio.quoctoan.io.vn/" target="_blank" class="footer-dev-link">Quốc Toàn</a>
+      </span>
+    </div>
+
+    <div class="footer-col">
+      <div class="footer-label">Kết nối</div>
+      <div class="footer-social-row">
+        <a href="https://www.facebook.com/duyhoangdaytoan" target="_blank" rel="noopener noreferrer" class="footer-social-btn" aria-label="Facebook" title="Facebook">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="#94a3b8" aria-hidden="true"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/></svg>
+        </a>
+        <a href="https://www.tiktok.com/@duyhoangdaytoan" target="_blank" rel="noopener noreferrer" class="footer-social-btn" aria-label="TikTok" title="TikTok">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#94a3b8" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/></svg>
+        </a>
+      </div>
+      <a href="https://www.facebook.com/duyhoangdaytoan" target="_blank" rel="noopener noreferrer" class="footer-link" style="font-size:.78rem">facebook.com/duyhoangdaytoan</a>
+      <a href="https://www.tiktok.com/@duyhoangdaytoan" target="_blank" rel="noopener noreferrer" class="footer-link" style="font-size:.78rem">tiktok.com/@duyhoangdaytoan</a>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <span>© 2026 DHDT LMS — All rights reserved. Nghiêm cấm sao chép, phân phối nội dung khi chưa được phép.</span>
+    <span style="display:inline-flex;align-items:center;gap:.5rem">
+      Phiên bản <strong style="color:#60a5fa">v1.5.0</strong>
+    </span>
+  </div>
 </footer>
 
 <script>
-// ══ PARTICLES ══
-(function(){
-  const wrap = document.getElementById('particles');
-  for(let i=0;i<55;i++){
-    const s=document.createElement('div');s.className='star';
-    const sz=Math.random()*2.2+.8;
-    s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-duration:${2+Math.random()*3}s;animation-delay:${Math.random()*4}s`;
-    wrap.appendChild(s);
-  }
-  const cols=['#818cf8','#34d399','#f472b6','#fbbf24','#60a5fa'];
-  for(let i=0;i<15;i++){
-    const p=document.createElement('div');p.className='particle';
-    const sz=Math.random()*5+3;
-    p.style.cssText=`width:${sz}px;height:${sz}px;background:${cols[i%cols.length]};left:${Math.random()*100}%;animation-duration:${10+Math.random()*14}s;animation-delay:${Math.random()*12}s`;
-    wrap.appendChild(p);
-  }
-})();
+/* ── City Grid ── */
+const CITY_DATA = [
+  { city:'Cần Thơ',       count:838, c1:'#6366f1', c2:'#4f46e5' },
+  { city:'Vĩnh Long',     count:355, c1:'#8b5cf6', c2:'#7c3aed' },
+  { city:'An Giang',      count:332, c1:'#10b981', c2:'#059669' },
+  { city:'Đồng Tháp',     count:308, c1:'#f59e0b', c2:'#d97706' },
+  { city:'Cà Mau',        count:197, c1:'#ec4899', c2:'#db2777' },
+  { city:'TP.HCM',        count:189, c1:'#f43f5e', c2:'#e11d48' },
+  { city:'Tây Ninh',      count:87,  c1:'#06b6d4', c2:'#0891b2' },
+  { city:'Khánh Hoà',     count:71,  c1:'#14b8a6', c2:'#0d9488' },
+  { city:'Hà Nội',        count:63,  c1:'#a855f7', c2:'#9333ea' },
+  { city:'Đồng Nai',      count:55,  c1:'#84cc16', c2:'#65a30d' },
+  { city:'Gia Lai',       count:55,  c1:'#fb923c', c2:'#ea580c' },
+  { city:'Hải Phòng',     count:39,  c1:'#38bdf8', c2:'#0ea5e9' },
+  { city:'Đà Nẵng',       count:39,  c1:'#34d399', c2:'#10b981' },
+  { city:'Bắc Ninh',      count:39,  c1:'#c084fc', c2:'#a855f7' },
+  { city:'Phú Thọ',       count:39,  c1:'#fbbf24', c2:'#f59e0b' },
+  { city:'Lâm Đồng',      count:31,  c1:'#4ade80', c2:'#22c55e' },
+  { city:'Ninh Bình',     count:31,  c1:'#67e8f9', c2:'#22d3ee' },
+  { city:'Hà Tĩnh',       count:24,  c1:'#f9a8d4', c2:'#ec4899' },
+  { city:'Huế',           count:24,  c1:'#a5b4fc', c2:'#6366f1' },
+  { city:'Tuyên Quang',   count:16,  c1:'#86efac', c2:'#22c55e' },
+  { city:'Sơn La',        count:16,  c1:'#fcd34d', c2:'#f59e0b' },
+  { city:'Thái Nguyên',   count:16,  c1:'#7dd3fc', c2:'#38bdf8' },
+  { city:'Các tỉnh khác', count:87,  c1:'#64748b', c2:'#475569' },
+];
+const maxC = CITY_DATA[0].count;
+const grid = document.getElementById('cityGrid');
+if (grid) {
+  CITY_DATA.forEach(function(d) {
+    var pct = Math.round(d.count / maxC * 100);
+    var el = document.createElement('div');
+    el.className = 'city-card';
+    el.innerHTML =
+      '<div class="city-header">' +
+        '<span class="city-name">' + d.city + '</span>' +
+        '<span class="city-count" style="background:linear-gradient(135deg,' + d.c1 + ',' + d.c2 + ');-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">' + d.count.toLocaleString() + '</span>' +
+      '</div>' +
+      '<div class="city-bar-bg"><div class="city-bar" style="width:0%;background:linear-gradient(90deg,' + d.c1 + ',' + d.c2 + ')"></div></div>' +
+      '<div class="city-pct">' + Math.round(d.count / 2950 * 100) + '% tổng học viên</div>';
+    grid.appendChild(el);
+  });
+  /* Animate bars on scroll */
+  var barObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('.city-bar').forEach(function(b) {
+          var w = b.style.width;
+          b.style.width = b.dataset.w || b.style.width;
+        });
+      }
+    });
+  }, { threshold: .1 });
+  /* Pre-set data-w then animate */
+  grid.querySelectorAll('.city-bar').forEach(function(b, i) {
+    var pct = Math.round(CITY_DATA[i].count / maxC * 100);
+    b.dataset.w = pct + '%';
+    setTimeout(function(){ b.style.width = pct + '%'; }, 300 + i * 30);
+  });
+}
 
-// ══ SCROLL REVEAL ══
-const observer = new IntersectionObserver(entries=>{
-  entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('visible'); });
-},{threshold:.12});
-document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+/* ── Scroll reveal ── */
+var revealObserver = new IntersectionObserver(function(entries) {
+  entries.forEach(function(e){ if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: .1 });
+document.querySelectorAll('.reveal').forEach(function(el){ revealObserver.observe(el); });
 </script>
 </body>
 </html>

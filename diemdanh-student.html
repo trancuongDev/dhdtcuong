@@ -1,0 +1,2412 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="theme-color" content="#0f172a"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>Điểm Danh — DHDT LMS</title>
+<link rel="icon" type="image/png" href="icons/icon-192.png"/>
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  /* Core palette */
+  --bg:#070d1a;
+  --bg2:#0d1526;
+  --bg3:#141f35;
+  --bg4:#1a2740;
+  --border:rgba(255,255,255,.08);
+  --border2:rgba(255,255,255,.04);
+  --border-glow:rgba(99,130,255,.25);
+
+  /* Text */
+  --text:#e8edf5;
+  --text2:#8b9ab5;
+  --text3:#4f607a;
+
+  /* Brand colors */
+  --accent:#4f8fff;
+  --accent2:#2563eb;
+  --accent-glow:rgba(79,143,255,.3);
+
+  /* Status */
+  --green:#22c55e;
+  --green2:#16a34a;
+  --green-glow:rgba(34,197,94,.3);
+  --red:#f87171;
+  --red2:#dc2626;
+  --yellow:#fbbf24;
+  --yellow2:#d97706;
+  --purple:#a78bfa;
+  --purple2:#7c3aed;
+  --cyan:#38bdf8;
+
+  /* Cards */
+  --card:rgba(255,255,255,.04);
+  --card2:rgba(255,255,255,.07);
+  --card-hover:rgba(255,255,255,.08);
+
+  --font:'Inter',system-ui,-apple-system,sans-serif;
+  --r:16px;
+  --nav-h:64px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+  color-scheme:dark;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+html{scrollbar-width:thin;scrollbar-color:var(--bg4) var(--bg);overflow-x:hidden}
+html::-webkit-scrollbar{width:4px}
+html::-webkit-scrollbar-track{background:var(--bg)}
+html::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px}
+
+body{
+  font-family:var(--font);
+  background:var(--bg);
+  color:var(--text);
+  min-height:100dvh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── BG DECOR ── */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 60% at 110% -10%,rgba(79,143,255,.12),transparent 60%),
+    radial-gradient(ellipse 60% 50% at -10% 110%,rgba(124,58,237,.1),transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 50%,rgba(79,143,255,.03),transparent);
+}
+
+/* ── TOPBAR (desktop) ── */
+.topbar{
+  position:sticky;top:0;z-index:200;
+  background:rgba(7,13,26,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:0 1.5rem;
+  display:flex;align-items:center;gap:.75rem;
+  height:56px;
+}
+.brand{
+  font-weight:800;font-size:1rem;white-space:nowrap;flex-shrink:0;
+  background:linear-gradient(135deg,#fff,var(--accent));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.tag{
+  font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  background:rgba(79,143,255,.15);border:1px solid rgba(79,143,255,.3);
+  color:#93c5fd;padding:.2rem .65rem;border-radius:999px;flex-shrink:0;
+}
+.dtab{
+  display:inline-flex;align-items:center;gap:.4rem;
+  height:56px;padding:0 1rem;
+  border:none;background:none;cursor:pointer;
+  font:600 .82rem/1 var(--font);color:var(--text3);
+  white-space:nowrap;border-bottom:2px solid transparent;
+  transition:color .2s,border-color .2s;flex-shrink:0;
+}
+.dtab:hover{color:var(--text2)}
+.dtab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.dtab-wrap{display:flex;align-items:center;flex:1;overflow-x:auto;margin-left:.25rem}
+.dtab-wrap::-webkit-scrollbar{display:none}
+.topbar-user{display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--text2);flex-shrink:0}
+.av{
+  width:30px;height:30px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--purple2));
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:.72rem;font-weight:800;flex-shrink:0;
+}
+.btn-back-top{
+  display:inline-flex;align-items:center;gap:.3rem;
+  padding:.4rem .85rem;border-radius:10px;font-size:.78rem;font-weight:600;
+  background:var(--card2);border:1px solid var(--border);
+  color:var(--text2);text-decoration:none;transition:all .15s;flex-shrink:0;
+}
+.btn-back-top:hover{background:var(--card-hover);color:var(--text)}
+
+/* ── MOBILE HEADER ── */
+.mob-header{
+  display:none;position:sticky;top:0;z-index:200;
+  background:rgba(7,13,26,.95);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--border);
+  padding:.65rem 1rem;
+  padding-top:calc(.65rem + env(safe-area-inset-top,0px));
+  align-items:center;justify-content:space-between;gap:.5rem;
+  min-height:54px;
+}
+.mob-title{font-weight:800;font-size:1.02rem;letter-spacing:-.01em}
+
+.mob-live-badge{
+  display:none;align-items:center;gap:.3rem;
+  background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.35);
+  border-radius:999px;padding:.18rem .6rem;font-size:.68rem;font-weight:700;color:#86efac;
+}
+.mob-live-badge::before{
+  content:'';width:6px;height:6px;border-radius:50%;background:#22c55e;
+  animation:pulse 1.5s ease-in-out infinite;display:inline-block;
+}
+.mob-live-badge.show{display:inline-flex}
+
+.mob-right{display:flex;align-items:center;gap:.45rem}
+.mob-av{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--purple2));
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:.8rem;font-weight:800;flex-shrink:0;cursor:pointer;
+  box-shadow:0 2px 12px var(--accent-glow);
+  transition:transform .15s;
+}
+.mob-av:active{transform:scale(.92)}
+.mob-back{
+  display:inline-flex;align-items:center;padding:.35rem .65rem;
+  border-radius:9px;font-size:.76rem;font-weight:600;
+  background:var(--card2);border:1px solid var(--border);
+  color:var(--text2);text-decoration:none;
+}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;
+  background:rgba(7,13,26,.97);
+  backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+  border-top:1px solid rgba(255,255,255,.07);
+  padding:.3rem .4rem calc(.3rem + var(--safe-b));
+  align-items:stretch;justify-content:space-around;gap:0;
+}
+.bnav-btn{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.18rem;
+  padding:.45rem .2rem .4rem;border-radius:14px;border:none;background:none;
+  color:var(--text3);cursor:pointer;min-width:0;flex:1;
+  transition:color .2s;position:relative;min-height:52px;
+  -webkit-tap-highlight-color:transparent;
+}
+.bnav-btn .ico{
+  font-size:1.4rem;line-height:1;display:block;
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1),filter .2s;
+}
+.bnav-btn .lbl{
+  font-size:.59rem;font-weight:600;line-height:1;
+  letter-spacing:.01em;color:inherit;
+  transition:color .2s;
+}
+.bnav-btn.active{color:var(--accent)}
+.bnav-btn.active .ico{
+  transform:scale(1.18) translateY(-1px);
+  filter:drop-shadow(0 0 8px var(--accent-glow));
+}
+.bnav-btn:active .ico{transform:scale(.85)}
+
+/* Active indicator bar */
+.bnav-btn::after{
+  content:'';
+  position:absolute;bottom:3px;left:50%;transform:translateX(-50%);
+  width:0;height:3px;border-radius:2px;
+  background:linear-gradient(90deg,var(--accent),var(--purple));
+  transition:width .25s cubic-bezier(.34,1.56,.64,1);
+}
+.bnav-btn.active::after{width:24px}
+
+.bnav-badge{
+  position:absolute;top:5px;right:calc(50% - 16px);
+  background:var(--red2);color:#fff;font-size:.5rem;font-weight:800;
+  padding:.08rem .3rem;border-radius:999px;min-width:14px;text-align:center;
+  display:none;line-height:1.4;border:1.5px solid var(--bg);
+}
+
+/* ── PAGES ── */
+.page{
+  display:none;position:relative;z-index:1;
+  padding:1rem 1rem calc(var(--nav-h) + 1rem);
+  max-width:680px;margin:0 auto;width:100%;
+}
+.page.active{display:block}
+
+/* ── HOME HERO ── */
+.home-hero{
+  position:relative;overflow:hidden;
+  background:linear-gradient(135deg,rgba(79,143,255,.15) 0%,rgba(124,58,237,.12) 100%);
+  border:1px solid rgba(79,143,255,.2);
+  border-radius:22px;
+  padding:1.35rem 1.25rem;margin-bottom:1.25rem;
+  display:flex;align-items:center;gap:1.1rem;
+}
+/* Decorative glow behind hero */
+.home-hero::before{
+  content:'';position:absolute;top:-40px;right:-40px;
+  width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle,rgba(79,143,255,.2),transparent 70%);
+  pointer-events:none;
+}
+.home-hero-av{
+  width:54px;height:54px;border-radius:16px;
+  background:linear-gradient(135deg,var(--accent),var(--purple2));
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;font-weight:900;flex-shrink:0;
+  box-shadow:0 4px 16px var(--accent-glow);
+}
+.home-hero-name{font-size:1.08rem;font-weight:800;line-height:1.25;letter-spacing:-.01em}
+.home-hero-sub{font-size:.8rem;color:var(--text2);margin-top:.2rem}
+.home-code-row{
+  display:inline-flex;align-items:center;gap:.5rem;
+  background:rgba(79,143,255,.1);border:1px solid rgba(79,143,255,.2);
+  border-radius:10px;padding:.4rem .9rem;margin-top:.65rem;font-size:.82rem;
+}
+
+/* ── LIVE SECTION ── */
+.live-section{
+  position:relative;overflow:hidden;
+  background:linear-gradient(135deg,rgba(34,197,94,.1),rgba(34,197,94,.04));
+  border:1.5px solid rgba(34,197,94,.3);
+  border-radius:18px;padding:1rem 1rem;margin-bottom:1rem;
+  box-shadow:0 4px 24px rgba(34,197,94,.08);
+}
+.live-label{
+  display:flex;align-items:center;gap:.5rem;
+  font-size:.7rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:#86efac;margin-bottom:.75rem;
+}
+.live-dot{
+  width:8px;height:8px;border-radius:50%;background:var(--green);
+  flex-shrink:0;position:relative;
+}
+.live-dot::after{
+  content:'';position:absolute;inset:-3px;border-radius:50%;
+  background:rgba(34,197,94,.3);animation:pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(1.5)}}
+
+/* ── SESSION CARD ── */
+.sess-card{
+  position:relative;overflow:hidden;
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:20px;padding:1.1rem;margin-bottom:.8rem;
+  transition:border-color .2s,box-shadow .2s,transform .15s;
+}
+.sess-card::before{
+  content:'';position:absolute;inset:0;border-radius:20px;
+  background:linear-gradient(135deg,rgba(255,255,255,.025),transparent 60%);
+  pointer-events:none;
+}
+.sess-card.open{
+  border-color:rgba(34,197,94,.4);
+  background:linear-gradient(135deg,rgba(34,197,94,.07),var(--bg3));
+  box-shadow:0 0 0 1px rgba(34,197,94,.15),0 8px 32px rgba(34,197,94,.1);
+}
+.sess-card.done{
+  border-color:rgba(79,143,255,.3);
+  background:linear-gradient(135deg,rgba(79,143,255,.06),var(--bg3));
+}
+
+/* ── BIG ATTEND BUTTON ── */
+.btn-attend-big{
+  display:flex;align-items:center;justify-content:center;gap:.7rem;
+  width:100%;padding:1.1rem;border-radius:16px;
+  font-size:1rem;font-weight:800;letter-spacing:.01em;
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:#fff;border:none;cursor:pointer;
+  box-shadow:0 6px 28px rgba(34,197,94,.4),0 2px 8px rgba(0,0,0,.3);
+  transition:all .18s;-webkit-user-select:none;user-select:none;
+}
+.btn-attend-big:active{transform:scale(.96);box-shadow:0 2px 12px rgba(34,197,94,.2)}
+.btn-attend-big:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-attend-big.done{
+  background:linear-gradient(135deg,#1e40af,#1d4ed8);
+  box-shadow:0 6px 28px rgba(29,78,216,.3);
+}
+
+/* ── STATUS BADGE ── */
+.badge{
+  display:inline-flex;align-items:center;gap:.3rem;
+  padding:.22rem .7rem;border-radius:999px;
+  font-size:.7rem;font-weight:700;white-space:nowrap;letter-spacing:.01em;
+}
+.badge-present{background:rgba(34,197,94,.15);color:#86efac;border:1px solid rgba(34,197,94,.25)}
+.badge-late{background:rgba(251,191,36,.12);color:#fde68a;border:1px solid rgba(251,191,36,.25)}
+.badge-absent{background:rgba(248,113,113,.12);color:#fca5a5;border:1px solid rgba(248,113,113,.25)}
+.badge-excused{background:rgba(167,139,250,.12);color:#c4b5fd;border:1px solid rgba(167,139,250,.25)}
+.badge-open{background:rgba(34,197,94,.12);color:#86efac;border:1px solid rgba(34,197,94,.2);font-size:.68rem}
+.badge-closed{background:rgba(255,255,255,.06);color:var(--text3);border:1px solid var(--border)}
+.badge-scheduled{background:rgba(79,143,255,.12);color:#93c5fd;border:1px solid rgba(79,143,255,.2)}
+.badge-pending{background:rgba(251,191,36,.1);color:#fde68a;border:1px solid rgba(251,191,36,.2)}
+.badge-approved{background:rgba(34,197,94,.12);color:#86efac;border:1px solid rgba(34,197,94,.2)}
+.badge-rejected{background:rgba(248,113,113,.12);color:#fca5a5;border:1px solid rgba(248,113,113,.2)}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{
+  font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:.75rem;
+  display:flex;align-items:center;gap:.5rem;
+}
+.sec-hdr::after{content:'';flex:1;height:1px;background:var(--border2)}
+
+/* ── HISTORY ITEM ── */
+.hist-item{
+  display:flex;align-items:center;gap:.85rem;
+  padding:.9rem 1rem;border-radius:16px;
+  background:var(--bg3);border:1px solid var(--border);
+  margin-bottom:.55rem;transition:background .15s,border-color .15s;
+}
+.hist-item:active{background:var(--card-hover)}
+.hist-ico{
+  width:42px;height:42px;border-radius:13px;
+  background:var(--bg4);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;flex-shrink:0;
+  border:1px solid var(--border);
+}
+.hist-info{flex:1;min-width:0}
+.hist-title{font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
+.hist-sub{font-size:.74rem;color:var(--text3);margin-top:.2rem}
+.hist-right{display:flex;flex-direction:column;align-items:flex-end;gap:.3rem;flex-shrink:0}
+.hist-time{font-size:.7rem;color:var(--text3)}
+
+/* ── STAT CARDS ── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem}
+.stat-card{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:18px;padding:1.1rem 1rem;text-align:center;
+  position:relative;overflow:hidden;
+  transition:border-color .2s,transform .15s;
+}
+.stat-card::before{
+  content:'';position:absolute;top:-20px;right:-20px;
+  width:60px;height:60px;border-radius:50%;
+  background:radial-gradient(circle,var(--c,rgba(79,143,255,.1)),transparent 70%);
+  pointer-events:none;
+}
+.stat-num{font-size:2rem;font-weight:900;line-height:1;letter-spacing:-.04em}
+.stat-lbl{font-size:.71rem;color:var(--text3);margin-top:.3rem;font-weight:500;letter-spacing:.01em}
+
+/* ── RATE CARD ── */
+.rate-card{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:18px;padding:1.1rem 1.15rem;margin-bottom:1rem;
+}
+.rate-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem}
+.prog{height:10px;background:rgba(255,255,255,.05);border-radius:999px;overflow:hidden}
+.prog-fill{height:100%;border-radius:999px;transition:width .9s cubic-bezier(.22,1,.36,1)}
+
+/* ── ABSENCE FORM ── */
+.form-card{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:20px;padding:1.25rem;margin-bottom:.9rem;
+}
+.form-group{margin-bottom:.95rem}
+.form-label{
+  display:block;font-size:.71rem;font-weight:700;color:var(--text3);
+  margin-bottom:.45rem;letter-spacing:.05em;text-transform:uppercase;
+}
+.form-control{
+  width:100%;padding:.78rem .95rem;
+  background:var(--bg4);border:1.5px solid var(--border);
+  border-radius:13px;font-size:.95rem;color:var(--text);
+  outline:none;transition:border-color .2s,box-shadow .2s;color-scheme:dark;
+  font-family:var(--font);
+}
+.form-control:focus{border-color:rgba(79,143,255,.5);box-shadow:0 0 0 3px rgba(79,143,255,.12)}
+.form-control option{background:#0d1526;color:#e8edf5}
+.radio-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.radio-opt{
+  display:flex;align-items:center;gap:.55rem;
+  padding:.65rem .9rem;border-radius:13px;
+  background:var(--bg4);border:1.5px solid var(--border);
+  cursor:pointer;font-size:.88rem;transition:all .2s;
+}
+.radio-opt input{accent-color:var(--accent);width:16px;height:16px;flex-shrink:0}
+.radio-opt:has(input:checked){
+  border-color:rgba(79,143,255,.5);
+  background:rgba(79,143,255,.1);color:#93c5fd;
+}
+.radio-opt:active{transform:scale(.97)}
+
+/* ── PRIMARY BUTTON ── */
+.btn-primary{
+  display:flex;align-items:center;justify-content:center;gap:.5rem;
+  width:100%;padding:.95rem 1.25rem;border-radius:14px;
+  font-size:.95rem;font-weight:800;letter-spacing:.01em;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+  border:none;cursor:pointer;transition:all .18s;
+  box-shadow:0 4px 20px var(--accent-glow);
+  font-family:var(--font);
+}
+.btn-primary:active{transform:scale(.97);box-shadow:none}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* ── BOTTOM SHEET ── */
+.sheet-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.8);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  z-index:999;display:none;align-items:center;justify-content:center;
+  padding:1rem;
+}
+.sheet-overlay.open{display:flex}
+.sheet{
+  background:var(--bg2);border:1px solid rgba(255,255,255,.1);
+  border-radius:22px;
+  width:100%;max-width:520px;
+  box-shadow:0 24px 60px rgba(0,0,0,.6);
+  animation:sheetIn .3s cubic-bezier(.22,1,.36,1) both;
+  overflow:hidden;max-height:88dvh;
+  display:flex;flex-direction:column;
+}
+@keyframes sheetIn{from{transform:scale(.94) translateY(10px);opacity:.5}to{transform:none;opacity:1}}
+
+.sheet-pill{
+  width:36px;height:4px;border-radius:999px;
+  background:rgba(255,255,255,.15);
+  margin:.8rem auto .4rem;flex-shrink:0;
+}
+.sheet-hd{
+  padding:.65rem 1.5rem 1.1rem;
+  background:linear-gradient(135deg,#0f2557,#1a3a8f);
+  flex-shrink:0;
+}
+.sheet-hd h3{font-size:1.05rem;font-weight:800;color:#fff;letter-spacing:-.01em}
+.sheet-hd p{font-size:.8rem;color:rgba(255,255,255,.6);margin-top:.18rem}
+.sheet-body{padding:1.35rem 1.5rem;overflow-y:auto;flex:1}
+.sheet-close{
+  float:right;width:30px;height:30px;border-radius:50%;
+  background:rgba(255,255,255,.12);color:#fff;font-size:.85rem;
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  margin-top:-.05rem;
+}
+
+/* ── CODE INPUT ── */
+.code-input{
+  width:100%;padding:1.1rem;
+  background:var(--bg3);border:2px solid var(--border);
+  border-radius:16px;font-size:max(1.4rem,16px);font-weight:800;
+  color:var(--accent);text-align:center;letter-spacing:.2em;
+  outline:none;transition:border-color .2s,box-shadow .2s;
+  color-scheme:dark;font-family:monospace;
+}
+.code-input:focus{
+  border-color:rgba(79,143,255,.6);
+  box-shadow:0 0 0 4px rgba(79,143,255,.12);
+}
+.code-hint{
+  font-size:.85rem;color:var(--text2);text-align:center;
+  margin-bottom:1rem;line-height:1.6;
+}
+.err-msg{
+  background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);
+  border-radius:12px;padding:.7rem .95rem;font-size:.84rem;font-weight:600;
+  color:#fca5a5;margin-top:.75rem;display:none;
+}
+.btn-big{
+  width:100%;padding:1.1rem;border-radius:16px;font-size:1rem;font-weight:800;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+  border:none;cursor:pointer;margin-top:.95rem;
+  box-shadow:0 6px 24px var(--accent-glow);transition:all .18s;
+  letter-spacing:.01em;font-family:var(--font);
+}
+.btn-big:active{transform:scale(.97);box-shadow:none}
+.btn-big:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* ── SUCCESS SHEET ── */
+.success-sheet{text-align:center;padding:1.75rem 1rem}
+.success-ico{font-size:4.5rem;animation:bIn .55s cubic-bezier(.22,1,.36,1)}
+@keyframes bIn{0%{transform:scale(0) rotate(-15deg);opacity:0}65%{transform:scale(1.25) rotate(5deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+.success-title{font-size:1.35rem;font-weight:900;color:var(--green);margin:.65rem 0 .3rem;letter-spacing:-.02em}
+.success-sub{font-size:.88rem;color:var(--text2)}
+.success-box{
+  background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);
+  border-radius:16px;padding:1rem 1.15rem;margin:1rem 0;text-align:left;
+  display:flex;flex-direction:column;gap:.4rem;
+}
+.success-box p{font-size:.88rem;color:#86efac;display:flex;align-items:center;gap:.5rem}
+.btn-meet{
+  display:flex;align-items:center;justify-content:center;gap:.5rem;
+  width:100%;padding:1rem;border-radius:14px;
+  background:rgba(79,143,255,.15);border:1px solid rgba(79,143,255,.3);
+  color:#93c5fd;font-size:.95rem;font-weight:800;text-decoration:none;
+  transition:background .15s;margin-bottom:.75rem;
+}
+.btn-meet:active{background:rgba(79,143,255,.25)}
+.btn-ok{
+  width:100%;padding:.95rem;border-radius:14px;font-size:.95rem;font-weight:700;
+  background:var(--bg4);border:1px solid var(--border);color:var(--text2);
+  cursor:pointer;transition:all .15s;font-family:var(--font);
+}
+.btn-ok:active{background:var(--card-hover)}
+
+/* ── GUIDE ── */
+.guide-step{background:var(--bg3);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:.9rem}
+.guide-step-hd{padding:1rem 1.15rem;display:flex;align-items:center;gap:.8rem}
+.guide-num{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1rem;color:#fff;font-weight:900;flex-shrink:0}
+.guide-step-body{padding:.95rem 1.15rem;display:flex;flex-direction:column;gap:.65rem}
+.guide-row{display:flex;gap:.7rem;align-items:flex-start}
+.guide-dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex-shrink:0;margin-top:.08rem}
+.guide-note{border-radius:12px;padding:.7rem .9rem;font-size:.82rem;line-height:1.6;margin-top:.25rem}
+
+/* ── ABSENCE ITEM ── */
+.abs-item{
+  display:flex;align-items:flex-start;gap:.8rem;
+  padding:.9rem 1rem;border-radius:16px;
+  background:var(--bg3);border:1px solid var(--border);
+  margin-bottom:.6rem;font-size:.86rem;
+}
+.abs-info{flex:1;min-width:0}
+.abs-title{font-weight:700;margin-bottom:.18rem;letter-spacing:-.01em}
+.abs-sub{font-size:.74rem;color:var(--text3)}
+
+/* ── TOAST ── */
+.toast-wrap{
+  position:fixed;bottom:calc(var(--nav-h) + .85rem + var(--safe-b));
+  right:.9rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem;align-items:flex-end;
+}
+.toast{
+  padding:.7rem 1.1rem;border-radius:14px;
+  background:rgba(20,31,53,.95);border:1px solid rgba(255,255,255,.1);
+  backdrop-filter:blur(12px);
+  font-size:.84rem;font-weight:600;color:var(--text);
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
+  animation:tIn .3s cubic-bezier(.22,1,.36,1) both;
+  display:flex;align-items:center;gap:.5rem;max-width:290px;
+}
+@keyframes tIn{from{opacity:0;transform:translateX(24px) scale(.95)}to{opacity:1;transform:none}}
+.toast.ok{border-color:rgba(34,197,94,.35);color:#86efac}
+.toast.err{border-color:rgba(248,113,113,.35);color:#fca5a5}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:3rem 1rem;color:var(--text3)}
+.empty span{font-size:2.8rem;display:block;margin-bottom:.75rem;filter:grayscale(.3)}
+
+/* ── PROFILE ── */
+.profile-rows{display:flex;flex-direction:column;gap:0}
+.profile-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.8rem 0;border-bottom:1px solid var(--border2);font-size:.88rem;
+}
+.profile-row:last-child{border:none}
+.profile-row-lbl{color:var(--text3);font-size:.8rem;font-weight:500}
+
+/* ── RESPONSIVE ── */
+@media(min-width:600px){
+  .topbar{display:flex}
+  .mob-header{display:none!important}
+  .bottom-nav{display:none!important}
+  .page{padding:1.5rem 1.5rem 3rem}
+  .toast-wrap{bottom:1.5rem}
+  .sheet{max-width:480px;max-height:90dvh}
+}
+@media(max-width:599px){
+  .topbar{display:none}
+  .mob-header{display:flex}
+  .bottom-nav{display:flex}
+  .radio-grid{grid-template-columns:1fr 1fr}
+  .page{padding:.9rem .9rem calc(var(--nav-h) + .75rem + var(--safe-b))}
+
+  /* Hero */
+  .home-hero{padding:1.1rem;border-radius:20px}
+  .home-hero-av{width:50px;height:50px;border-radius:14px;font-size:1.25rem}
+  .home-hero-name{font-size:1rem}
+
+  /* Session card */
+  .sess-card{padding:1rem;margin-bottom:.7rem;border-radius:18px}
+
+  /* Stats: 2x2 trên mobile nhỏ */
+  .stats-grid{grid-template-columns:1fr 1fr;gap:.65rem}
+  .stat-num{font-size:1.85rem}
+}
+
+/* Pull-to-refresh */
+.ptr-indicator{
+  display:none;align-items:center;justify-content:center;gap:.5rem;
+  position:fixed;top:calc(54px + env(safe-area-inset-top,0px) + .5rem);
+  left:50%;transform:translateX(-50%);
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:999px;padding:.4rem 1.1rem;font-size:.76rem;font-weight:600;
+  color:var(--text2);box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:199;
+}
+.ptr-indicator.show{display:flex}
+.ptr-spin{
+  width:14px;height:14px;border:2px solid rgba(255,255,255,.15);
+  border-top-color:var(--accent);border-radius:50%;
+  animation:spin .65s linear infinite;
+}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@keyframes moreIn{from{opacity:0;transform:scale(.9) translateY(8px)}to{opacity:1;transform:none}}
+@keyframes barGrow { from { height: 0; opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<!-- DESKTOP TOPBAR -->
+<div class="topbar">
+  <span class="brand">DHDT LMS</span>
+  <span class="tag">Điểm danh</span>
+  <div class="dtab-wrap">
+    <button class="dtab active" onclick="showTab('home')"     id="dtab-home">🏠 Trang chủ</button>
+    <button class="dtab"        onclick="showTab('schedule')" id="dtab-schedule">📆 Lịch học</button>
+    <button class="dtab"        onclick="showTab('history')"  id="dtab-history">📝 Lịch sử</button>
+    <button class="dtab"        onclick="showTab('absence')"  id="dtab-absence">🔴 Báo vắng</button>
+    <button class="dtab"        onclick="showTab('stats')"    id="dtab-stats">📊 Chuyên cần</button>
+    <button class="dtab"        onclick="showTab('guide')"    id="dtab-guide">📖 Hướng dẫn</button>
+  </div>
+  <div class="topbar-user">
+    <a href="student.html" class="btn-back-top">← Học sinh</a>
+    <div class="av" id="userAv">H</div>
+    <span id="userName">Học sinh</span>
+  </div>
+</div>
+
+<!-- MOBILE HEADER -->
+<div class="mob-header" id="mobHeader">
+  <div style="display:flex;align-items:center;gap:.55rem;min-width:0">
+    <div class="mob-title" id="mobTitle">Điểm danh</div>
+    <span class="mob-live-badge" id="mobLiveBadge">🟢 Đang mở</span>
+  </div>
+  <div class="mob-right">
+    <a href="student.html" class="mob-back">← HS</a>
+    <div class="mob-av" id="mobAv" onclick="showTab('profile')" title="Hồ sơ">
+      <span id="mobAvTxt">H</span>
+    </div>
+  </div>
+</div>
+
+<!-- Pull-to-refresh indicator -->
+<div class="ptr-indicator" id="ptrIndicator">
+  <div class="ptr-spin"></div>Đang cập nhật...
+</div>
+
+<!-- TOAST -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ══ HOME ══ -->
+<div class="page active" id="pageHome">
+
+  <!-- Hero card -->
+  <div class="home-hero" id="homeHero">
+    <div class="home-hero-av" id="homeAvMob">H</div>
+    <div>
+      <div class="home-hero-name" id="homeNameMob">Xin chào!</div>
+      <div class="home-hero-sub" id="homeDateStr"></div>
+      <div class="home-code-row" id="homeCodeRow" style="display:none">
+        <span style="color:var(--text2);font-size:.8rem">Mã HV:</span>
+        <strong id="homeCodeVal" style="color:#60a5fa;letter-spacing:.06em;font-family:monospace">—</strong>
+        <button onclick="copyCode()" style="background:none;border:none;cursor:pointer;padding:2px;color:var(--text2);font-size:.9rem" title="Sao chép">📋</button>
+      </div>
+      <button id="btnEnableNotif" onclick="setupNotifications().then(()=>this.style.display='none')"
+        style="display:none;margin-top:.5rem;font-size:.73rem;padding:.3rem .75rem;border-radius:8px;
+        background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.25);color:#fde68a;cursor:pointer;font-weight:600">
+        🔔 Bật nhắc giờ học
+      </button>
+    </div>
+  </div>
+
+  <!-- Widget tuần này -->
+  <div id="weekSummary" style="display:none;margin-bottom:1rem"></div>
+
+  <!-- Buổi đang mở – LIVE -->
+  <div id="openSection" style="display:none;margin-bottom:1rem">
+    <div class="live-section">
+      <div class="live-label"><span class="live-dot"></span>Đang mở điểm danh</div>
+      <div id="openList"></div>
+    </div>
+  </div>
+
+  <!-- Lịch hôm nay -->
+  <div id="todaySection">
+    <div class="sec-hdr">📅 Hôm nay</div>
+    <div id="todayList"><div class="empty"><span>📭</span>Không có buổi nào hôm nay</div></div>
+  </div>
+
+</div>
+
+<!-- ══ SCHEDULE ══ -->
+<div class="page" id="pageSchedule">
+  <div style="margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem">
+    <div style="font-size:1.05rem;font-weight:800">📆 Lịch học sắp tới</div>
+    <div style="display:flex;gap:.5rem;align-items:center">
+      <button onclick="schedPrev()" style="width:34px;height:34px;border-radius:9px;background:var(--card);border:1px solid var(--border);color:var(--text2);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">‹</button>
+      <span id="schedWeekLabel" style="font-size:.84rem;font-weight:700;color:var(--text);min-width:120px;text-align:center">—</span>
+      <button onclick="schedNext()" style="width:34px;height:34px;border-radius:9px;background:var(--card);border:1px solid var(--border);color:var(--text2);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">›</button>
+      <button onclick="schedGoToday()" style="padding:.3rem .75rem;border-radius:9px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);color:#60a5fa;font-size:.78rem;font-weight:700;cursor:pointer">Hôm nay</button>
+    </div>
+  </div>
+  <!-- Mini calendar strip (7 ngày trong tuần) -->
+  <div id="schedStrip" style="display:grid;grid-template-columns:repeat(7,1fr);gap:.35rem;margin-bottom:1.1rem"></div>
+  <!-- Danh sách buổi của ngày được chọn -->
+  <div id="schedDayLabel" style="font-size:.73rem;font-weight:800;color:var(--text3);letter-spacing:.05em;text-transform:uppercase;margin-bottom:.6rem"></div>
+  <div id="schedList"><div class="empty"><span>⏳</span>Đang tải...</div></div>
+</div>
+
+<!-- ══ HISTORY ══ -->
+<div class="page" id="pageHistory">
+  <div style="margin-bottom:1rem">
+    <div style="font-size:1.05rem;font-weight:800">📝 Lịch sử điểm danh</div>
+  </div>
+  <div id="historyList"><div class="empty"><span>⏳</span>Đang tải...</div></div>
+</div>
+
+<!-- ══ ABSENCE ══ -->
+<div class="page" id="pageAbsence">
+  <div style="margin-bottom:1rem">
+    <div style="font-size:1.05rem;font-weight:800">🔴 Báo vắng</div>
+    <p style="font-size:.84rem;color:var(--text2);margin-top:.25rem">Gửi đơn trước buổi học — giáo viên sẽ duyệt.</p>
+  </div>
+
+  <div class="form-card">
+    <div class="form-group">
+      <label class="form-label">Buổi học <span style="color:var(--red)">*</span></label>
+      <select class="form-control" id="absSessSelect" style="width:100%;padding:.75rem .9rem;font-size:.95rem">
+        <option value="">-- Chọn buổi học --</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Lý do <span style="color:var(--red)">*</span></label>
+      <div class="radio-grid">
+        <label class="radio-opt"><input type="radio" name="absReason" value="health"/> Sức khỏe</label>
+        <label class="radio-opt"><input type="radio" name="absReason" value="family"/> Việc gia đình</label>
+        <label class="radio-opt"><input type="radio" name="absReason" value="exam"/>   Học/Thi khác</label>
+        <label class="radio-opt"><input type="radio" name="absReason" value="personal"/>Việc cá nhân</label>
+        <label class="radio-opt" style="grid-column:span 2"><input type="radio" name="absReason" value="other"/>  Lý do khác</label>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:.5rem">
+      <label class="form-label">Ghi thêm (tuỳ chọn)</label>
+      <textarea class="form-control" id="absDetail" rows="3" placeholder="Mô tả thêm..."></textarea>
+    </div>
+    <div id="absError" class="err-msg"></div>
+    <button class="btn-primary" onclick="submitAbsence()" style="margin-top:.75rem">
+      <span id="absBtnText">📩 Gửi đơn xin vắng</span>
+    </button>
+  </div>
+
+  <div style="margin-top:1.25rem">
+    <div class="sec-hdr">📋 Đơn đã gửi</div>
+    <div id="myAbsenceList"><div class="empty" style="padding:1.25rem"><span style="font-size:1.8rem">📭</span>Chưa có đơn nào</div></div>
+  </div>
+</div>
+
+<!-- ══ STATS ══ -->
+<div class="page" id="pageStats">
+  <div style="margin-bottom:1rem">
+    <div style="font-size:1.05rem;font-weight:800">📊 Chuyên cần của tôi</div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num" id="sSTotal" style="color:var(--accent)">—</div><div class="stat-lbl">Tổng buổi</div></div>
+    <div class="stat-card"><div class="stat-num" id="sSPresent" style="color:var(--green)">—</div><div class="stat-lbl">Có mặt</div></div>
+    <div class="stat-card"><div class="stat-num" id="sSExcused" style="color:var(--purple)">—</div><div class="stat-lbl">Có phép</div></div>
+    <div class="stat-card"><div class="stat-num" id="sSAbsent" style="color:var(--red)">—</div><div class="stat-lbl">Vắng</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem">
+    <div class="stat-card" style="--c:rgba(251,191,36,.15)">
+      <div style="font-size:1.5rem;margin-bottom:.2rem">🔥</div>
+      <div class="stat-num" id="sStreak" style="color:var(--yellow)">—</div>
+      <div class="stat-lbl">Streak liên tiếp</div>
+    </div>
+    <div class="stat-card" style="--c:rgba(167,139,250,.15)">
+      <div style="font-size:1.5rem;margin-bottom:.2rem">⭐</div>
+      <div class="stat-num" id="sBestStreak" style="color:var(--purple)">—</div>
+      <div class="stat-lbl">Streak tốt nhất</div>
+    </div>
+  </div>
+  <div class="rate-card">
+    <div class="rate-row">
+      <span style="font-size:.9rem;font-weight:700">Tỉ lệ chuyên cần</span>
+      <strong id="sSRate" style="color:var(--green);font-size:1.1rem">—%</strong>
+    </div>
+    <div class="prog"><div class="prog-fill" id="sSRateBar" style="width:0%;background:var(--green)"></div></div>
+  </div>
+  <div id="statsChart" style="margin-bottom:1rem"></div>
+  <div id="statsDetail"><div class="empty"><span>⏳</span>Đang tải...</div></div>
+</div>
+
+<!-- ══ GUIDE ══ -->
+<div class="page" id="pageGuide">
+  <div style="margin-bottom:1rem">
+    <div style="font-size:1.05rem;font-weight:800">📖 Hướng dẫn sử dụng</div>
+    <p style="font-size:.84rem;color:var(--text2);margin-top:.25rem">Hướng dẫn các chức năng điểm danh.</p>
+  </div>
+
+  <!-- Bước 1: Điểm danh -->
+  <div class="guide-step">
+    <div class="guide-step-hd" style="background:linear-gradient(135deg,rgba(34,197,94,.2),rgba(34,197,94,.06))">
+      <div class="guide-num" style="background:#22c55e">1</div>
+      <div><div style="font-weight:800;font-size:.96rem">Điểm danh buổi học</div><div style="font-size:.78rem;color:var(--text2)">Xác nhận bằng mã học viên</div></div>
+    </div>
+    <div class="guide-step-body">
+      <div class="guide-row"><div class="guide-dot" style="background:rgba(34,197,94,.15);color:#22c55e">①</div><p style="font-size:.86rem;color:var(--text2);line-height:1.6">Vào <strong style="color:var(--text)">🏠 Trang chủ</strong> — khi giáo viên mở điểm danh, buổi học hiện ở mục <strong style="color:#22c55e">Đang mở</strong>.</p></div>
+      <div class="guide-row"><div class="guide-dot" style="background:rgba(34,197,94,.15);color:#22c55e">②</div><p style="font-size:.86rem;color:var(--text2);line-height:1.6">Bấm nút <strong style="color:var(--text)">✍️ Điểm danh ngay</strong> — nhập mã học viên và bấm xác nhận.</p></div>
+      <div class="guide-row"><div class="guide-dot" style="background:rgba(34,197,94,.15);color:#22c55e">③</div><p style="font-size:.86rem;color:var(--text2);line-height:1.6">Điểm danh sau 30 phút kể từ giờ bắt đầu sẽ được ghi nhận là <strong style="color:var(--yellow)">⏰ Đi muộn</strong>.</p></div>
+      <div class="guide-note" style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);color:#fde68a">⚠️ Chỉ điểm danh khi buổi đang mở. Sau khi đóng, không điểm danh được nữa.</div>
+    </div>
+  </div>
+
+  <!-- Bước 2: Báo vắng -->
+  <div class="guide-step">
+    <div class="guide-step-hd" style="background:linear-gradient(135deg,rgba(248,113,113,.2),rgba(248,113,113,.06))">
+      <div class="guide-num" style="background:#f87171">2</div>
+      <div><div style="font-weight:800;font-size:.96rem">Báo vắng</div><div style="font-size:.78rem;color:var(--text2)">Gửi đơn xin phép trước buổi học</div></div>
+    </div>
+    <div class="guide-step-body">
+      <div class="guide-row"><div class="guide-dot" style="background:rgba(248,113,113,.12);color:#f87171">①</div><p style="font-size:.86rem;color:var(--text2);line-height:1.6">Vào tab <strong style="color:var(--text)">🔴 Báo vắng</strong> — danh sách chỉ hiển thị các buổi trong <strong style="color:var(--text)">tuần hiện tại (Thứ 2 → Chủ Nhật)</strong> mà <strong style="color:var(--text)">giáo viên đã bật cho phép xin vắng</strong>.</p></div>
+      <div class="guide-row"><div class="guide-dot" style="background:rgba(248,113,113,.12);color:#f87171">②</div><p style="font-size:.86rem;color:var(--text2);line-height:1.6">Chọn buổi, chọn lý do và bấm <strong style="color:var(--text)">📩 Gửi đơn</strong>. Giáo viên sẽ duyệt sớm nhất có thể.</p></div>
+      <div class="guide-row"><div class="guide-dot" style="background:rgba(248,113,113,.12);color:#f87171">③</div><p style="font-size:.86rem;color:var(--text2);line-height:1.6">Sau khi duyệt → trạng thái cập nhật thành <strong style="color:#86efac">✅ Có phép</strong> hoặc <strong style="color:#fca5a5">❌ Từ chối</strong>.</p></div>
+      <div class="guide-note" style="background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.2);color:#fdba74">📩 Buổi chỉ xuất hiện khi giáo viên bật <strong>Cho phép xin vắng</strong> — dù buổi có tính chuyên cần hay không.</div>
+      <div class="guide-note" style="background:rgba(79,143,255,.08);border:1px solid rgba(79,143,255,.2);color:#93c5fd">💡 Xem trạng thái đơn đã gửi trong mục <strong>Đơn đã gửi</strong> ngay bên dưới form.</div>
+    </div>
+  </div>
+
+  <!-- Bước 3: Ký hiệu buổi học -->
+  <div class="guide-step">
+    <div class="guide-step-hd" style="background:linear-gradient(135deg,rgba(251,191,36,.2),rgba(251,191,36,.06))">
+      <div class="guide-num" style="background:#fbbf24">3</div>
+      <div><div style="font-weight:800;font-size:.96rem">Ký hiệu buổi học</div><div style="font-size:.78rem;color:var(--text2)">Hiểu badge trên từng buổi</div></div>
+    </div>
+    <div class="guide-step-body">
+      <p style="font-size:.86rem;color:var(--text2);line-height:1.6">Mỗi buổi học hiển thị các badge nhỏ cho bạn biết cần làm gì:</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.35rem">
+        <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.15);border-radius:12px;padding:.7rem .8rem;font-size:.8rem">
+          <div style="font-weight:800;color:#86efac;margin-bottom:.25rem">📊 Tính chuyên cần</div>
+          <div style="color:var(--text2);line-height:1.5">Buổi này được tính vào tỉ lệ % của bạn. Vắng sẽ ảnh hưởng.</div>
+        </div>
+        <div style="background:rgba(100,116,139,.08);border:1px solid rgba(100,116,139,.15);border-radius:12px;padding:.7rem .8rem;font-size:.8rem">
+          <div style="font-weight:800;color:var(--text3);margin-bottom:.25rem">📊 Không tính CC</div>
+          <div style="color:var(--text2);line-height:1.5">Không ảnh hưởng tỉ lệ. Vắng cũng không bị trừ điểm.</div>
+        </div>
+        <div style="background:rgba(79,143,255,.08);border:1px solid rgba(79,143,255,.15);border-radius:12px;padding:.7rem .8rem;font-size:.8rem">
+          <div style="font-weight:800;color:#93c5fd;margin-bottom:.25rem">✍️ Bắt điểm danh</div>
+          <div style="color:var(--text2);line-height:1.5">Khi buổi mở, bạn cần chủ động điểm danh. Không điểm danh đúng hạn sẽ bị tính vắng.</div>
+        </div>
+        <div style="background:rgba(100,116,139,.08);border:1px solid rgba(100,116,139,.15);border-radius:12px;padding:.7rem .8rem;font-size:.8rem">
+          <div style="font-weight:800;color:var(--text3);margin-bottom:.25rem">✋ Không bắt ĐD</div>
+          <div style="color:var(--text2);line-height:1.5">Buổi này không cần điểm danh.</div>
+        </div>
+        <div style="background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.15);border-radius:12px;padding:.7rem .8rem;font-size:.8rem;grid-column:span 2">
+          <div style="font-weight:800;color:#fdba74;margin-bottom:.25rem">📩 Cho phép xin vắng</div>
+          <div style="color:var(--text2);line-height:1.5">Giáo viên đã bật cho phép xin vắng. Buổi này sẽ xuất hiện trong danh sách <strong>Báo vắng</strong> dù có tính chuyên cần hay không.</div>
+        </div>
+        <div style="background:rgba(100,116,139,.06);border:1px solid rgba(100,116,139,.12);border-radius:12px;padding:.7rem .8rem;font-size:.8rem;grid-column:span 2">
+          <div style="font-weight:800;color:var(--text3);margin-bottom:.25rem">🚫 Không cho xin vắng</div>
+          <div style="color:var(--text2);line-height:1.5">Giáo viên đã tắt chức năng xin vắng. Buổi này sẽ không hiện trong mục Báo vắng.</div>
+        </div>
+      </div>
+      <div class="guide-note" style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);color:#fde68a;margin-top:.35rem">
+        💡 Các badge này hoạt động <strong>độc lập</strong> với nhau — buổi không tính CC vẫn có thể được xin vắng nếu giáo viên bật.
+      </div>
+    </div>
+  </div>
+
+  <!-- Bước 4: Xem chuyên cần -->
+  <div class="guide-step">
+    <div class="guide-step-hd" style="background:linear-gradient(135deg,rgba(167,139,250,.2),rgba(167,139,250,.06))">
+      <div class="guide-num" style="background:#a78bfa">4</div>
+      <div><div style="font-weight:800;font-size:.96rem">Xem chuyên cần</div><div style="font-size:.78rem;color:var(--text2)">Theo dõi tỉ lệ tham dự</div></div>
+    </div>
+    <div class="guide-step-body">
+      <p style="font-size:.86rem;color:var(--text2);line-height:1.6">Vào tab <strong style="color:var(--text)">📊 Chuyên cần</strong> để xem tổng hợp và tỉ lệ của bạn.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.25rem">
+        <div style="background:rgba(34,197,94,.08);border-radius:10px;padding:.6rem .75rem;font-size:.8rem;color:#86efac;text-align:center">✅ Có mặt<br/><strong>Đúng giờ</strong></div>
+        <div style="background:rgba(251,191,36,.08);border-radius:10px;padding:.6rem .75rem;font-size:.8rem;color:#fde68a;text-align:center">⏰ Đi muộn<br/><strong>Trễ &gt;30 phút</strong></div>
+        <div style="background:rgba(167,139,250,.08);border-radius:10px;padding:.6rem .75rem;font-size:.8rem;color:#c4b5fd;text-align:center">📋 Có phép<br/><strong>Đơn duyệt</strong></div>
+        <div style="background:rgba(248,113,113,.08);border-radius:10px;padding:.6rem .75rem;font-size:.8rem;color:#fca5a5;text-align:center">❌ Vắng<br/><strong>Không phép</strong></div>
+      </div>
+      <div class="guide-note" style="background:rgba(79,143,255,.08);border:1px solid rgba(79,143,255,.2);color:#93c5fd;margin-top:.35rem">
+        ℹ️ Chỉ những buổi có <strong>Tính chuyên cần</strong> mới được đưa vào tính tỉ lệ %. Buổi "Không tính CC" sẽ hiển thị mờ.
+      </div>
+    </div>
+  </div>
+
+  <!-- Bước 5: Xem lịch học -->
+  <div class="guide-step" style="margin-bottom:.85rem">
+    <div class="guide-step-hd" style="background:linear-gradient(135deg,rgba(79,143,255,.2),rgba(79,143,255,.06))">
+      <div class="guide-num" style="background:#4f8fff">5</div>
+      <div><div style="font-weight:800;font-size:.96rem">Xem lịch học</div><div style="font-size:.78rem;color:var(--text2)">Biết trước lịch để chủ động sắp xếp</div></div>
+    </div>
+    <div class="guide-step-body">
+      <div class="guide-row"><div class="guide-dot" style="background:rgba(79,143,255,.12);color:#93c5fd">①</div><p style="font-size:.86rem;color:var(--text2);line-height:1.6">Vào tab <strong style="color:var(--text)">📆 Lịch học</strong> — hệ thống hiển thị 7 ngày trong tuần dưới dạng thanh lịch.</p></div>
+      <div class="guide-row"><div class="guide-dot" style="background:rgba(79,143,255,.12);color:#93c5fd">②</div><p style="font-size:.86rem;color:var(--text2);line-height:1.6">Bấm vào ngày bất kỳ để xem danh sách buổi học. Ngày có buổi học có <strong style="color:var(--accent)">chấm xanh</strong> bên dưới.</p></div>
+      <div class="guide-row"><div class="guide-dot" style="background:rgba(79,143,255,.12);color:#93c5fd">③</div><p style="font-size:.86rem;color:var(--text2);line-height:1.6">Dùng nút <strong style="color:var(--text)">‹ ›</strong> để xem tuần trước / sau. Bấm <strong style="color:var(--text)">Hôm nay</strong> để quay về tuần hiện tại.</p></div>
+      <div class="guide-row"><div class="guide-dot" style="background:rgba(79,143,255,.12);color:#93c5fd">④</div><p style="font-size:.86rem;color:var(--text2);line-height:1.6">Nếu buổi đang mở, nút <strong style="color:#22c55e">✍️ Điểm danh</strong> xuất hiện ngay trong lịch — không cần ra trang chủ.</p></div>
+      <div class="guide-note" style="background:rgba(79,143,255,.08);border:1px solid rgba(79,143,255,.2);color:#93c5fd;margin-top:.15rem">
+        💡 Lịch học chỉ hiển thị buổi mà <strong>giáo viên đã lên lịch</strong> trong hệ thống. Kiểm tra thường xuyên để không bỏ lỡ.
+      </div>
+    </div>
+  </div>
+
+  <!-- Ý nghĩa điểm danh -->
+  <div class="guide-step">
+    <div class="guide-step-hd" style="background:linear-gradient(135deg,rgba(56,189,248,.2),rgba(56,189,248,.06))">
+      <div class="guide-num" style="background:linear-gradient(135deg,#38bdf8,#0ea5e9)">💡</div>
+      <div><div style="font-weight:800;font-size:.96rem">Ý nghĩa của việc điểm danh</div><div style="font-size:.78rem;color:var(--text2)">Tại sao điểm danh quan trọng với bạn</div></div>
+    </div>
+    <div class="guide-step-body">
+      <div style="display:flex;flex-direction:column;gap:.6rem">
+        <div style="display:flex;align-items:flex-start;gap:.75rem;padding:.75rem;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.15);border-radius:13px">
+          <span style="font-size:1.3rem;flex-shrink:0;margin-top:.05rem">📈</span>
+          <div>
+            <div style="font-size:.86rem;font-weight:700;color:#86efac;margin-bottom:.2rem">Theo dõi tiến độ học tập</div>
+            <p style="font-size:.82rem;color:var(--text2);line-height:1.55">Điểm danh giúp hệ thống ghi lại số buổi bạn đã tham dự, từ đó bạn — và giáo viên — nắm được bức tranh toàn cảnh về quá trình học của bạn.</p>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:.75rem;padding:.75rem;background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.15);border-radius:13px">
+          <span style="font-size:1.3rem;flex-shrink:0;margin-top:.05rem">🤝</span>
+          <div>
+            <div style="font-size:.86rem;font-weight:700;color:#c4b5fd;margin-bottom:.2rem">Thể hiện tinh thần trách nhiệm</div>
+            <p style="font-size:.82rem;color:var(--text2);line-height:1.55">Tham dự đầy đủ và đúng giờ là cách bạn cho thấy sự nghiêm túc với khóa học, đồng thời tôn trọng công sức của giáo viên và các bạn cùng lớp.</p>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:.75rem;padding:.75rem;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.15);border-radius:13px">
+          <span style="font-size:1.3rem;flex-shrink:0;margin-top:.05rem">🔔</span>
+          <div>
+            <div style="font-size:.86rem;font-weight:700;color:#fde68a;margin-bottom:.2rem">Hỗ trợ kịp thời khi cần</div>
+            <p style="font-size:.82rem;color:var(--text2);line-height:1.55">Khi tỉ lệ của bạn xuống thấp, giáo viên có thể chủ động liên hệ để hỏi thăm và hỗ trợ — điểm danh là tín hiệu sớm giúp phát hiện vấn đề trước khi quá muộn.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nghĩa vụ học viên -->
+  <div class="guide-step">
+    <div class="guide-step-hd" style="background:linear-gradient(135deg,rgba(249,115,22,.2),rgba(249,115,22,.06))">
+      <div class="guide-num" style="background:linear-gradient(135deg,#f97316,#ea580c)">📋</div>
+      <div><div style="font-weight:800;font-size:.96rem">Nghĩa vụ của học viên</div><div style="font-size:.78rem;color:var(--text2)">Những điều bạn cần thực hiện khi tham gia lớp</div></div>
+    </div>
+    <div class="guide-step-body">
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+
+        <div style="display:flex;align-items:flex-start;gap:.65rem">
+          <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:900;flex-shrink:0;margin-top:.08rem">1</div>
+          <div>
+            <p style="font-size:.86rem;font-weight:700;color:var(--text);margin-bottom:.15rem">Điểm danh đúng giờ mỗi buổi học</p>
+            <p style="font-size:.8rem;color:var(--text2);line-height:1.55">Điểm danh trong vòng <strong style="color:var(--text)">30 phút</strong> kể từ giờ bắt đầu để không bị tính là đi muộn. Không điểm danh = vắng mặt.</p>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:flex-start;gap:.65rem">
+          <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:900;flex-shrink:0;margin-top:.08rem">2</div>
+          <div>
+            <p style="font-size:.86rem;font-weight:700;color:var(--text);margin-bottom:.15rem">Tự điểm danh bằng mã của chính mình</p>
+            <p style="font-size:.8rem;color:var(--text2);line-height:1.55">Mã học viên là định danh cá nhân — <strong style="color:#fca5a5">không chia sẻ hoặc dùng mã của người khác</strong>. Hệ thống ghi nhận thiết bị; gian lận điểm danh sẽ bị phát hiện.</p>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:flex-start;gap:.65rem">
+          <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:900;flex-shrink:0;margin-top:.08rem">3</div>
+          <div>
+            <p style="font-size:.86rem;font-weight:700;color:var(--text);margin-bottom:.15rem">Báo vắng trước khi nghỉ (nếu có thể)</p>
+            <p style="font-size:.8rem;color:var(--text2);line-height:1.55">Nếu biết trước sẽ không tham dự, hãy gửi đơn xin vắng qua tab <strong style="color:var(--text)">🔴 Báo vắng</strong> để giáo viên biết và ghi nhận có phép. <strong style="color:var(--text)">Không báo = vắng không phép.</strong></p>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:flex-start;gap:.65rem">
+          <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:900;flex-shrink:0;margin-top:.08rem">4</div>
+          <div>
+            <p style="font-size:.86rem;font-weight:700;color:var(--text);margin-bottom:.15rem">Duy trì tỉ lệ chuyên cần tối thiểu 80%</p>
+            <p style="font-size:.8rem;color:var(--text2);line-height:1.55">Đây là ngưỡng cơ bản để được đánh giá hoàn thành khóa học. Theo dõi tỉ lệ của bạn thường xuyên trong tab <strong style="color:var(--text)">📊 Chuyên cần</strong>.</p>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:flex-start;gap:.65rem">
+          <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:900;flex-shrink:0;margin-top:.08rem">5</div>
+          <div>
+            <p style="font-size:.86rem;font-weight:700;color:var(--text);margin-bottom:.15rem">Liên hệ giáo viên nếu có sai sót</p>
+            <p style="font-size:.8rem;color:var(--text2);line-height:1.55">Nếu điểm danh sai hoặc bị ghi vắng nhầm, hãy chủ động báo giáo viên hoặc trợ lý để điều chỉnh kịp thời. Hệ thống hỗ trợ điều chỉnh thủ công.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="guide-note" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#fca5a5;margin-top:.5rem">
+        ⚠️ Vắng quá 20% tổng số buổi (tính chuyên cần) có thể ảnh hưởng đến kết quả đánh giá cuối khóa. Hãy chủ động và có trách nhiệm với việc học của bản thân.
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div style="background:var(--bg3);border:1px solid var(--border);border-radius:18px;padding:1.15rem;margin-bottom:.85rem">
+    <div style="font-weight:800;font-size:.9rem;margin-bottom:.9rem;display:flex;align-items:center;gap:.45rem">❓ Câu hỏi thường gặp</div>
+    <div style="display:flex;flex-direction:column;gap:.75rem;font-size:.86rem">
+      <div>
+        <strong>Mã học viên ở đâu?</strong>
+        <p style="color:var(--text2);margin-top:.2rem;line-height:1.5">Hiển thị ngay trên trang chủ sau khi đăng nhập. Liên hệ giáo viên nếu không thấy.</p>
+      </div>
+      <div style="border-top:1px solid var(--border2);padding-top:.75rem">
+        <strong>Quên điểm danh?</strong>
+        <p style="color:var(--text2);margin-top:.2rem;line-height:1.5">Liên hệ giáo viên hoặc trợ lý để điều chỉnh thủ công sau buổi học.</p>
+      </div>
+      <div style="border-top:1px solid var(--border2);padding-top:.75rem">
+        <strong>Tỉ lệ chuyên cần thấp?</strong>
+        <p style="color:var(--text2);margin-top:.2rem;line-height:1.5">Giáo viên theo dõi để đánh giá. Cố gắng duy trì trên 80%.</p>
+      </div>
+      <div style="border-top:1px solid var(--border2);padding-top:.75rem">
+        <strong>Buổi "Không tính CC" có cần điểm danh không?</strong>
+        <p style="color:var(--text2);margin-top:.2rem;line-height:1.5">Tùy vào badge <strong>✍️ Bắt điểm danh</strong> hay <strong>✋ Không bắt ĐD</strong>. Hai chức năng này hoạt động độc lập nhau.</p>
+      </div>
+      <div style="border-top:1px solid var(--border2);padding-top:.75rem">
+        <strong>Tại sao không thấy buổi trong mục Báo vắng?</strong>
+        <p style="color:var(--text2);margin-top:.2rem;line-height:1.5">Có thể do một trong các lý do sau: (1) Buổi không nằm trong tuần hiện tại (Thứ 2 – Chủ Nhật), (2) Giáo viên đã tắt chức năng <strong>Cho phép xin vắng</strong> cho buổi đó, (3) Bạn đã điểm danh hoặc đã gửi đơn cho buổi đó rồi.</p>
+      </div>
+      <div style="border-top:1px solid var(--border2);padding-top:.75rem">
+        <strong>Buổi không tính CC có được xin vắng không?</strong>
+        <p style="color:var(--text2);margin-top:.2rem;line-height:1.5">Có thể được, nếu giáo viên bật <strong>📩 Cho phép xin vắng</strong> cho buổi đó. Chức năng này hoạt động độc lập với "Tính chuyên cần".</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PROFILE (mobile only) ══ -->
+<div class="page" id="pageProfile">
+  <div style="text-align:center;padding:1.5rem 0 1.25rem">
+    <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;margin:0 auto .75rem" id="profileAvMob">H</div>
+    <div style="font-size:1.1rem;font-weight:800" id="profileNameMob">—</div>
+    <div style="font-size:.84rem;color:var(--text2);margin-top:.2rem" id="profileClassMob">—</div>
+  </div>
+  <div class="form-card">
+    <div class="profile-rows" id="profileRows"></div>
+  </div>
+  <button onclick="doLogout()" style="display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.9rem;border-radius:13px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5;font-size:.95rem;font-weight:700;cursor:pointer;margin-top:.5rem">
+    🚪 Đăng xuất
+  </button>
+</div>
+
+<!-- ══ BOTTOM NAV ══ -->
+<nav class="bottom-nav" id="bottomNav">
+  <button class="bnav-btn active" onclick="showTab('home')"     id="bnav-home">
+    <span class="ico">🏠</span><span class="lbl">Trang chủ</span>
+    <span class="bnav-badge" id="bnav-live-badge"></span>
+  </button>
+  <button class="bnav-btn" onclick="showTab('schedule')" id="bnav-schedule">
+    <span class="ico">📆</span><span class="lbl">Lịch học</span>
+  </button>
+  <button class="bnav-btn" onclick="showTab('history')"  id="bnav-history">
+    <span class="ico">📝</span><span class="lbl">Lịch sử</span>
+  </button>
+  <button class="bnav-btn" onclick="showTab('absence')"  id="bnav-absence">
+    <span class="ico">🔴</span><span class="lbl">Báo vắng</span>
+  </button>
+  <button class="bnav-btn" onclick="showTab('stats')"    id="bnav-stats">
+    <span class="ico">📊</span><span class="lbl">Chuyên cần</span>
+  </button>
+  <button class="bnav-btn" onclick="toggleMoreMenu()" id="bnav-more">
+    <span class="ico">···</span><span class="lbl">Thêm</span>
+  </button>
+</nav>
+
+<!-- More Menu popup -->
+<div id="moreMenuOverlay" onclick="toggleMoreMenu()" style="display:none;position:fixed;inset:0;z-index:199"></div>
+<div id="moreMenu" style="
+  display:none;position:fixed;bottom:calc(var(--nav-h) + .5rem + var(--safe-b));right:.75rem;
+  z-index:210;background:rgba(13,21,38,.97);border:1px solid rgba(255,255,255,.1);
+  border-radius:16px;padding:.5rem;min-width:160px;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);backdrop-filter:blur(16px);
+  animation:moreIn .2s cubic-bezier(.22,1,.36,1) both">
+  <button onclick="showTab('guide');toggleMoreMenu()" style="display:flex;align-items:center;gap:.65rem;width:100%;padding:.65rem .85rem;border-radius:10px;background:none;border:none;color:var(--text);font-size:.88rem;font-weight:600;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.07)'" onmouseout="this.style.background='none'">
+    <span style="font-size:1.1rem">📖</span> Hướng dẫn
+  </button>
+  <button onclick="location.href='student.html'" style="display:flex;align-items:center;gap:.65rem;width:100%;padding:.65rem .85rem;border-radius:10px;background:none;border:none;color:var(--text);font-size:.88rem;font-weight:600;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.07)'" onmouseout="this.style.background='none'">
+    <span style="font-size:1.1rem">🏠</span> Trang chủ HS
+  </button>
+</div>
+
+<!-- ══ ATTENDANCE LOG MODAL ══ -->
+<div class="sheet-overlay" id="absenceDetailModal">
+  <div class="sheet">
+    <div class="sheet-pill"></div>
+    <div class="sheet-hd">
+      <button class="sheet-close" onclick="closeModal('absenceDetailModal')">✕</button>
+      <h3>📋 Lịch sử điểm danh</h3>
+    </div>
+    <div class="sheet-body" id="absenceDetailBody"></div>
+    <div style="padding:.75rem 1.5rem" id="absenceDetailFooter">
+      <button class="btn-ok" onclick="closeModal('absenceDetailModal')">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CHECK-IN BOTTOM SHEET ══ -->
+<div class="sheet-overlay" id="checkinSheet">
+  <div class="sheet">
+    <div class="sheet-pill"></div>
+    <div class="sheet-hd">
+      <button class="sheet-close" onclick="closeCheckin()">✕</button>
+      <h3 id="sheetTitle">Điểm danh</h3>
+      <p id="sheetSub" style="padding-right:2rem"></p>
+    </div>
+    <div class="sheet-body">
+      <p class="code-hint">Nhập mã học viên của bạn để xác nhận tham gia</p>
+      <input type="text" id="hvCodeInput" class="code-input"
+             placeholder="Mã học viên..."
+             autocomplete="off" autocorrect="off" autocapitalize="characters"
+             inputmode="text"/>
+      <div class="err-msg" id="checkinErr"></div>
+      <button class="btn-big" id="checkinBtn" onclick="submitCheckin()">
+        <span id="checkinBtnTxt">✅ Xác nhận điểm danh</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SUCCESS BOTTOM SHEET ══ -->
+<div class="sheet-overlay" id="successSheet">
+  <div class="sheet">
+    <div class="sheet-pill"></div>
+    <div class="sheet-body success-sheet">
+      <div class="success-ico">🎉</div>
+      <div class="success-title">Điểm danh thành công!</div>
+      <div class="success-sub">Bạn đã được ghi nhận tham gia buổi học.</div>
+      <div class="success-box">
+        <p id="sucSess"></p>
+        <p id="sucTime"></p>
+      </div>
+      <a id="sucMeetWrap" href="#" target="_blank" rel="noopener" class="btn-meet" style="display:none">
+        🎥 Vào Google Meet ngay
+      </a>
+      <button class="btn-ok" onclick="closeSuccess()">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Auth ────────────────────────────────────────────────────────
+const _u = sessionStorage.getItem('dh_user') || localStorage.getItem('dh_user');
+const _n = sessionStorage.getItem('dh_name') || localStorage.getItem('dh_name') || _u;
+const _r = sessionStorage.getItem('dh_role') || localStorage.getItem('dh_role');
+if (!_u || _r !== 'student') location.href = 'login.html';
+
+// Sync vào sessionStorage để student.js đọc được khi quay về
+if(_u && !sessionStorage.getItem('dh_user')){
+  sessionStorage.setItem('dh_user', _u);
+  sessionStorage.setItem('dh_name', _n||_u);
+  sessionStorage.setItem('dh_role', _r||'student');
+}
+
+const db = DH_CFG.createDb();
+
+// Điền tên
+document.getElementById('userAv').textContent  = (_n||'H')[0].toUpperCase();
+document.getElementById('userName').textContent = _n||'Học sinh';
+document.getElementById('mobAvTxt').textContent  = (_n||'H')[0].toUpperCase();
+document.getElementById('homeAvMob').textContent = (_n||'H')[0].toUpperCase();
+document.getElementById('profileAvMob').textContent = (_n||'H')[0].toUpperCase();
+document.getElementById('homeNameMob').textContent = `Xin chào, ${_n||'bạn'}! 👋`;
+
+// ── Helpers ─────────────────────────────────────────────────────
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(d){ if(!d)return''; const[y,m,dd]=(d+'').split('-'); return`${dd}/${m}/${y}`; }
+function fmtTime(ts){ return ts?new Date(ts).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}):'—'; }
+// Trả về ngày LOCAL (YYYY-MM-DD) — KHÔNG dùng toISOString() vì trả UTC, lệch múi giờ VN (UTC+7)
+function today(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+
+const STATUS = {
+  present:{ label:'Đúng giờ', icon:'✅', cls:'badge-present' },
+  late:   { label:'Đi muộn',  icon:'⏰', cls:'badge-late'    },
+  absent: { label:'Vắng',     icon:'❌', cls:'badge-absent'  },
+  excused:{ label:'Có phép',  icon:'📋', cls:'badge-excused' },
+};
+const REASON_LABELS = {health:'Sức khỏe',family:'Việc gia đình',exam:'Học/Thi khác',personal:'Việc cá nhân',other:'Khác'};
+
+// ── Toast ────────────────────────────────────────────────────────
+function toast(msg, type='ok'){
+  const wrap=document.getElementById('toastWrap');
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;
+  t.textContent=msg;
+  wrap.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+
+// ── Live link helper ─────────────────────────────────────────────
+const LIVE_META = {
+  meet:    { icon:'🎥', label:'Vào Google Meet',   color:'#60a5fa', bg:'rgba(59,130,246,.15)',  border:'rgba(59,130,246,.3)'  },
+  tiktok:  { icon:'🎵', label:'Xem TikTok Live',   color:'#f472b6', bg:'rgba(244,114,182,.12)', border:'rgba(244,114,182,.3)' },
+  youtube: { icon:'▶️', label:'Xem YouTube Live',  color:'#f87171', bg:'rgba(248,113,113,.12)', border:'rgba(248,113,113,.3)' },
+  zoom:    { icon:'💻', label:'Vào Zoom',           color:'#60a5fa', bg:'rgba(59,130,246,.12)',  border:'rgba(59,130,246,.3)'  },
+  other:   { icon:'🔗', label:'Vào lớp học trực tiếp', color:'#a3e635', bg:'rgba(163,230,53,.1)',border:'rgba(163,230,53,.25)'},
+};
+function renderLiveBtns(s, onlyOpen=true){
+  if(onlyOpen && s.status!=='open') return '';
+  let html = '';
+  // Xác định nền tảng từ platform_type hoặc live_type
+  const pt = s.platform_type || s.live_type || (s.meet_link ? 'meet' : null);
+  // Link: meet_link hoặc live_link
+  const link = s.meet_link || s.live_link || '';
+  if(!link) return ''; // không có link thì không hiện nút bấm
+
+  const m = LIVE_META[pt] || LIVE_META.meet;
+  html = `<a href="${esc(link)}" target="_blank" rel="noopener"
+    style="display:flex;align-items:center;justify-content:center;gap:.5rem;
+      width:100%;padding:.85rem;border-radius:13px;margin-top:.6rem;
+      background:${m.bg};border:1px solid ${m.border};
+      color:${m.color};font-size:.92rem;font-weight:800;text-decoration:none;
+      transition:opacity .15s"
+    onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+    ${m.icon} ${m.label}
+  </a>`;
+  return html;
+}
+
+// Hiển thị badge nền tảng học (dùng cho buổi scheduled — học sinh biết trước học ở đâu)
+function renderLivePlatformBadge(s){
+  // Xác định nền tảng: ưu tiên platform_type → live_type → suy từ meet_link
+  const pt = s.platform_type || s.live_type || (s.meet_link ? 'meet' : null);
+  if(!pt) return '';
+
+  const labels  = {meet:'Google Meet', tiktok:'TikTok Live', youtube:'YouTube Live', zoom:'Zoom', other:'Live stream'};
+  const icons   = {meet:'🎥', tiktok:'🎵', youtube:'▶️', zoom:'💻', other:'🔗'};
+  const colors  = {meet:'#60a5fa', tiktok:'#f472b6', youtube:'#f87171', zoom:'#60a5fa', other:'#a3e635'};
+  const bgs     = {meet:'rgba(59,130,246,.1)', tiktok:'rgba(244,114,182,.1)', youtube:'rgba(248,113,113,.1)', zoom:'rgba(59,130,246,.1)', other:'rgba(163,230,53,.1)'};
+  const borders = {meet:'rgba(59,130,246,.25)', tiktok:'rgba(244,114,182,.25)', youtube:'rgba(248,113,113,.25)', zoom:'rgba(59,130,246,.25)', other:'rgba(163,230,53,.2)'};
+
+  const label  = labels[pt]  || 'Live stream';
+  const icon   = icons[pt]   || '🔗';
+  const color  = colors[pt]  || '#a3e635';
+  const bg     = bgs[pt]     || bgs.other;
+  const border = borders[pt] || borders.other;
+
+  return `<div style="margin-top:.4rem">
+    <span style="display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:700;
+      color:${color};background:${bg};border:1px solid ${border};
+      padding:.25rem .7rem;border-radius:999px">
+      ${icon} Học qua ${label}
+    </span>
+  </div>`;
+}
+
+// ── Tab navigation ───────────────────────────────────────────────
+const TAB_TITLES = {home:'Điểm danh',schedule:'Lịch học',history:'Lịch sử',absence:'Báo vắng',stats:'Chuyên cần',guide:'Hướng dẫn',profile:'Hồ sơ'};
+
+// Theo dõi ngày để tự động reset khi qua ngày mới (trang mở qua đêm)
+let _lastKnownDate = today();
+function _checkDateChange(){
+  const nowDate = today();
+  if(nowDate !== _lastKnownDate){
+    _lastKnownDate = nowDate;
+    // Reset lịch về hôm nay nếu user đang ở tuần hiện tại
+    if(_schedWeekOffset === 0) _schedSelectedDate = nowDate;
+    return true; // ngày đã thay đổi
+  }
+  return false;
+}
+
+function showTab(name){
+  // Đóng more menu nếu đang mở
+  const moreMenu = document.getElementById('moreMenu');
+  const moreOverlay = document.getElementById('moreMenuOverlay');
+  if(moreMenu) moreMenu.style.display='none';
+  if(moreOverlay) moreOverlay.style.display='none';
+  const moreBtn = document.getElementById('bnav-more');
+  if(moreBtn) moreBtn.classList.remove('active');
+
+  // Kiểm tra ngày thay đổi mỗi khi user chuyển tab
+  _checkDateChange();
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.bnav-btn,.dtab').forEach(b=>b.classList.remove('active'));
+  const pageId = 'page'+name.charAt(0).toUpperCase()+name.slice(1);
+  const p = document.getElementById(pageId);
+  if(p) p.classList.add('active');
+  const bn = document.getElementById('bnav-'+name);
+  if(bn) bn.classList.add('active');
+  const dt = document.getElementById('dtab-'+name);
+  if(dt) dt.classList.add('active');
+  const mt = document.getElementById('mobTitle');
+  if(mt) mt.textContent = TAB_TITLES[name]||'Điểm danh';
+  if(name==='home')     loadHome();
+  if(name==='schedule') loadSchedule();
+  if(name==='history')  loadHistory();
+  if(name==='absence')  { loadAbsenceSessions(); loadMyAbsences(); }
+  if(name==='stats')    loadStats();
+  if(name==='profile')  loadProfile();
+}
+
+// ── My classes ──────────────────────────────────────────────────
+let myClasses=[];
+
+async function loadMyClasses(){
+  if(myClasses.length) return;
+  const {data:st}=await db.from('students').select('id,class_name,student_code').eq('username',_u).single();
+  const code=st?.student_code||'';
+  sessionStorage.setItem('dh_code',code);
+  const baseClasses=(st?.class_name||'').split(',').map(c=>c.trim()).filter(Boolean);
+  if(st?.id){
+    const {data:sc}=await db.from('student_classes').select('class_name').eq('student_id',st.id);
+    const extra=(sc||[]).flatMap(r=>r.class_name.split(',').map(c=>c.trim())).filter(Boolean);
+    myClasses=[...new Set([...baseClasses,...extra])];
+  } else myClasses=baseClasses;
+  if(code){
+    document.getElementById('homeCodeRow').style.display='inline-flex';
+    document.getElementById('homeCodeVal').textContent=code;
+  }
+}
+
+function copyCode(){
+  const code=sessionStorage.getItem('dh_code')||'';
+  if(!code) return;
+  navigator.clipboard?.writeText(code).then(()=>toast('📋 Đã sao chép mã HV'));
+}
+
+// ── NOTIFICATIONS ────────────────────────────────────────────────
+async function setupNotifications() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
+}
+
+function scheduleSessionReminders(sessions) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const now = new Date();
+  const todayStr = today();
+  sessions.forEach(s => {
+    if (s.session_date !== todayStr) return;
+    if (!s.start_time) return;
+    const t = s.start_time.length === 5 ? s.start_time + ':00' : s.start_time;
+    const startDT = new Date(`${todayStr}T${t}`);
+    // Nhắc trước 15 phút
+    const remindAt = new Date(startDT.getTime() - 15 * 60 * 1000);
+    const delay = remindAt - now;
+    if (delay > 0 && delay < 8 * 60 * 60 * 1000) { // chỉ trong 8 tiếng tới
+      const key = `notif_${s.id}_${todayStr}`;
+      if (sessionStorage.getItem(key)) return; // đã lên lịch rồi
+      sessionStorage.setItem(key, '1');
+      setTimeout(() => {
+        new Notification('⏰ Sắp đến giờ học!', {
+          body: `${s.title} bắt đầu lúc ${s.start_time}. Hãy chuẩn bị nhé!`,
+          icon: 'icons/icon-192.png',
+          tag: `session-${s.id}`,
+        });
+      }, delay);
+    }
+  });
+}
+
+// ── HOME ────────────────────────────────────────────────────────
+async function loadHome(){
+  await loadMyClasses();
+  await setupNotifications();
+  const dateStr=new Date().toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'numeric'});
+  document.getElementById('homeDateStr').textContent='📅 '+dateStr;
+
+  // Nút bật thông báo
+  const notifBtn = document.getElementById('btnEnableNotif');
+  if (notifBtn && 'Notification' in window && Notification.permission === 'default') {
+    notifBtn.style.display = 'inline-block';
+  }
+
+  if(!myClasses.length){
+    document.getElementById('openSection').style.display='none';
+    document.getElementById('todayList').innerHTML='<div class="empty"><span>⚠️</span>Chưa được gán lớp</div>';
+    document.getElementById('weekSummary').style.display='none';
+    return;
+  }
+
+  const todayStr=today();
+  const { from: weekFrom, to: weekTo } = _getCurrentWeekRange();
+  const [
+    {data:openSessions},
+    {data:todaySessions},
+    {data:weekSessions},
+  ] = await Promise.all([
+    db.from('dd_sessions').select('*').eq('status','open').in('class_name',myClasses).order('start_time'),
+    db.from('dd_sessions').select('*').in('class_name',myClasses).eq('session_date',todayStr).order('start_time'),
+    db.from('dd_sessions').select('id,title,session_date,start_time,status,class_name')
+      .in('class_name', myClasses)
+      .gte('session_date', weekFrom).lte('session_date', weekTo)
+      .order('session_date').order('start_time'),
+  ]);
+
+  // Lấy record điểm danh của tôi
+  const allIds=[...new Set([...(openSessions||[]).map(s=>s.id),...(todaySessions||[]).map(s=>s.id)])];
+  let myRecMap={};
+  if(allIds.length){
+    const {data:myRecs}=await db.from('dd_records').select('*').eq('username',_u).in('session_id',allIds);
+    myRecMap=Object.fromEntries((myRecs||[]).map(r=>[r.session_id,r]));
+  }
+
+  // --- Open sessions ---
+  const openEl=document.getElementById('openList');
+  const openSect=document.getElementById('openSection');
+  if((openSessions||[]).length){
+    openSect.style.display='';
+    openEl.innerHTML=(openSessions||[]).map(s=>renderSessCard(s,myRecMap[s.id],true)).join('');
+    _updateLiveBadge(true);
+  } else {
+    openSect.style.display='none';
+    _updateLiveBadge(false);
+  }
+
+  // --- Today sessions --- (ẩn buổi đang open vì đã hiện ở section trên)
+  const todayEl=document.getElementById('todayList');
+  const todayFiltered=(todaySessions||[]).filter(s=>s.status!=='open');
+  if(!todayFiltered.length){
+    todayEl.innerHTML='<div class="empty"><span>📭</span>Không có buổi nào hôm nay</div>';
+  } else {
+    todayEl.innerHTML=todayFiltered.map(s=>renderSessCard(s,myRecMap[s.id],false)).join('');
+  }
+  setTimeout(()=>{ if(window._cdTick) window._cdTick(); }, 50);
+
+  // Schedule reminders cho buổi hôm nay
+  scheduleSessionReminders(todaySessions||[]);
+
+  // --- Week summary widget ---
+  const ws = weekSessions||[];
+  const total = ws.length;
+  if(total > 0){
+    const remaining = ws.filter(s => s.session_date >= todayStr && s.status !== 'closed').length;
+    const weekSummaryEl = document.getElementById('weekSummary');
+    weekSummaryEl.style.display = '';
+    weekSummaryEl.innerHTML = `
+      <div style="background:rgba(79,143,255,.07);border:1px solid rgba(79,143,255,.2);border-radius:16px;padding:.85rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem">
+        <div style="display:flex;align-items:center;gap:.6rem">
+          <span style="font-size:1.5rem">📅</span>
+          <div>
+            <div style="font-size:.78rem;color:var(--text3);font-weight:600;letter-spacing:.02em">TUẦN NÀY</div>
+            <div style="font-weight:800;font-size:.95rem;margin-top:.1rem">Còn <span style="color:#60a5fa">${remaining}</span> buổi · Tổng ${total}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:.3rem;flex-wrap:wrap;max-width:120px;justify-content:flex-end">
+          ${ws.map(s => {
+            const isPast = s.session_date < todayStr || s.status==='closed';
+            const isToday = s.session_date === todayStr;
+            const color = isPast ? 'var(--green)' : isToday ? '#60a5fa' : 'rgba(255,255,255,.15)';
+            const border = isToday ? '2px solid #60a5fa' : '2px solid transparent';
+            return `<span style="width:10px;height:10px;border-radius:50%;background:${color};border:${border};flex-shrink:0" title="${esc(s.title)}"></span>`;
+          }).join('')}
+        </div>
+      </div>`;
+  } else {
+    document.getElementById('weekSummary').style.display='none';
+  }
+}
+
+// Cache buổi học để openCheckin không cần truyền JSON qua onclick inline
+const _sessCache = new Map();
+
+function renderSessCard(s, rec, isOpenSection, isHome=true){
+  // Lưu session vào cache để dùng khi openCheckin(id)
+  _sessCache.set(s.id, s);
+  const isOpen=s.status==='open';
+  const done=rec&&(rec.status==='present'||rec.status==='late'||rec.status==='excused');
+  const sm=rec?(STATUS[rec.status]||STATUS.absent):null;
+
+  // Icon buổi học — SVG avatar dùng chữ cái đầu
+  const initChar = (s.title||'?').trim()[0].toUpperCase();
+  const iconColors = [
+    ['#3b82f6','#8b5cf6'], // xanh-tím
+    ['#10b981','#3b82f6'], // xanh lá-xanh
+    ['#f59e0b','#ef4444'], // vàng-đỏ
+    ['#8b5cf6','#ec4899'], // tím-hồng
+    ['#06b6d4','#3b82f6'], // cyan-xanh
+  ];
+  const colorPair = iconColors[initChar.charCodeAt(0) % iconColors.length];
+  const subjIcon = `<svg width="52" height="52" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="ig${initChar}" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${colorPair[0]}"/>
+      <stop offset="100%" stop-color="${colorPair[1]}"/>
+    </linearGradient></defs>
+    <rect width="52" height="52" rx="14" fill="url(#ig${initChar})"/>
+    <text x="26" y="34" text-anchor="middle" font-size="22" font-weight="800" font-family="system-ui,sans-serif" fill="#fff">${initChar}</text>
+  </svg>`;
+
+  // Status badge
+  const statusColor = isOpen?'#60a5fa':'rgba(255,255,255,.55)';
+  const statusBg    = isOpen?'rgba(59,130,246,.25)':'rgba(255,255,255,.1)';
+  const statusLabel = s.status==='open'?'Đang mở':s.status==='closed'?'Đã đóng':'Sắp học';
+
+  // Platform label
+  const isMeet    = !!(s.meet_link || s.platform_type==='meet');
+  const isTiktok  = s.live_type==='tiktok'  || s.platform_type==='tiktok';
+  const isYoutube = s.live_type==='youtube' || s.platform_type==='youtube';
+  const isZoom    = s.live_type==='zoom'    || s.platform_type==='zoom';
+  const isOther   = !!s.live_link && !isMeet && !isTiktok && !isYoutube && !isZoom;
+
+  const platformLabel = isMeet    ? 'Google Meet'
+    : isTiktok  ? 'TikTok Live'
+    : isYoutube ? 'YouTube Live'
+    : isZoom    ? 'Zoom'
+    : isOther   ? 'Lớp trực tiếp' : '';
+
+  const platformIcon = isMeet    ? '🎓'
+    : isTiktok  ? '🎵'
+    : isYoutube ? '▶️'
+    : isZoom    ? '💻'
+    : isOther   ? '🔗' : '';
+
+  const platformColor = isMeet    ? '#60a5fa'
+    : isTiktok  ? '#f472b6'
+    : isYoutube ? '#f87171'
+    : isZoom    ? '#818cf8'
+    : '#a3e635';
+
+  const platformBg = isMeet    ? 'rgba(59,130,246,.12)'
+    : isTiktok  ? 'rgba(244,114,182,.12)'
+    : isYoutube ? 'rgba(248,113,113,.12)'
+    : isZoom    ? 'rgba(129,140,248,.12)'
+    : 'rgba(163,230,53,.1)';
+
+  // Meet/Live link
+  const mainLink = s.meet_link || s.live_link || '';
+  const mainLinkLabel = isMeet ? `🎥 Tham gia lớp học` : isOther||isTiktok||isYoutube||isZoom ? `${platformIcon} Tham gia lớp học` : '';
+
+  // Note boxes
+  const noteBox = s.count_attendance===false && s.require_checkin===false
+    ? `<div style="display:flex;align-items:flex-start;gap:.6rem;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:.6rem .8rem;margin-bottom:.5rem">
+        <span style="font-size:1rem;flex-shrink:0;margin-top:.05rem">⚠️</span>
+        <div style="font-size:.82rem;color:var(--yellow);line-height:1.6"><strong>LƯU Ý VỀ BUỔI HỌC</strong><br/>Buổi học này không tính vào tỷ lệ chuyên cần.<br/>Không yêu cầu điểm danh trong buổi học này.</div>
+      </div>`
+    : s.count_attendance===false
+      ? `<div style="display:flex;align-items:center;gap:.6rem;background:rgba(100,116,139,.08);border:1px solid rgba(100,116,139,.2);border-radius:10px;padding:.55rem .8rem;margin-bottom:.5rem;font-size:.82rem;color:var(--text3)">
+          <span>📊</span> Buổi này <strong>không tính</strong> vào tỉ lệ chuyên cần của bạn.
+        </div>`
+      : s.require_checkin===false
+        ? `<div style="display:flex;align-items:center;gap:.6rem;background:rgba(100,116,139,.08);border:1px solid rgba(100,116,139,.2);border-radius:10px;padding:.55rem .8rem;margin-bottom:.5rem;font-size:.82rem;color:var(--text3)">
+            <span>✋</span> Buổi học này không điểm danh.
+          </div>`
+        : `<div style="display:flex;align-items:flex-start;gap:.6rem;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:10px;padding:.55rem .8rem;margin-bottom:.5rem">
+            <span style="font-size:1rem;flex-shrink:0;margin-top:.05rem;color:#6ee7b7">✅</span>
+            <div style="font-size:.82rem;color:var(--text2);line-height:1.6">Buổi này <strong style="color:#6ee7b7">được tính</strong> vào tỉ lệ chuyên cần. Khi buổi học được mở, học viên cần chủ động thực hiện điểm danh.</div>
+          </div>
+          ${s.count_attendance!==false&&s.require_checkin!==false?`<div style="display:flex;align-items:flex-start;gap:.6rem;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:10px;padding:.55rem .8rem;margin-bottom:.5rem">
+            <span style="font-size:1rem;flex-shrink:0;margin-top:.05rem">⚠️</span>
+            <div style="font-size:.82rem;color:var(--yellow);line-height:1.6">Lưu ý: Nếu không thực hiện điểm danh trong thời gian quy định, học viên sẽ được tính là vắng mặt.</div>
+          </div>`:''}`;
+
+  return `
+    <div class="sess-card${isOpen?' open':''}${done?' done':''}" style="border-radius:18px;padding:1rem 1.1rem">
+
+      <!-- HEADER: icon + info + status -->
+      <div style="display:flex;align-items:flex-start;gap:.85rem;margin-bottom:.85rem">
+        <div style="width:52px;height:52px;border-radius:14px;flex-shrink:0;overflow:hidden">${subjIcon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem">
+            <div style="font-weight:800;font-size:1rem;line-height:1.3">${esc(s.title)}</div>
+            <span style="background:${statusBg};color:${statusColor};font-size:.71rem;font-weight:700;padding:.22rem .65rem;border-radius:999px;white-space:nowrap;flex-shrink:0;border:1px solid ${isOpen?'rgba(59,130,246,.35)':'rgba(255,255,255,.15)'}">${statusLabel}</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:.45rem;font-size:.78rem;color:var(--text2);margin-top:.3rem">
+            <span>🕐 ${s.start_time||'—'}${s.end_time?' – '+s.end_time:''}</span>
+            <span>📚 ${esc(s.class_name)}</span>
+          </div>
+          ${platformLabel?`<span style="display:inline-block;margin-top:.3rem;font-size:.71rem;padding:.18rem .6rem;border-radius:6px;font-weight:700;background:${platformBg};color:${platformColor};border:1px solid ${platformColor}33">${platformIcon} ${platformLabel}</span>`:''}
+        </div>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem">
+        ${isHome&&isOpen&&!done&&s.require_checkin!==false
+          ?`<button class="btn-attend-big" onclick="openCheckin(${s.id})" style="flex:1;min-width:140px;font-size:1rem">✍️ Điểm danh ngay</button>`
+          :`${mainLink&&mainLinkLabel&&done?`<a href="${mainLink}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.4rem;padding:.5rem .9rem;border-radius:10px;background:linear-gradient(135deg,rgba(59,130,246,.9),rgba(139,92,246,.8));color:#fff;font-size:.82rem;font-weight:700;text-decoration:none">${mainLinkLabel} ↗</a>`:''}
+          ${isHome&&!done?`<button onclick="showTab('guide')" style="display:inline-flex;align-items:center;gap:.4rem;padding:.5rem .9rem;border-radius:10px;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.25);color:#6ee7b7;font-size:.82rem;font-weight:700;cursor:pointer">🔔 Tìm hướng dẫn</button>`:''}
+          <span style="display:inline-flex;align-items:center;gap:.35rem;padding:.45rem .8rem;border-radius:10px;font-size:.78rem;font-weight:700;${s.count_attendance===false?'background:rgba(100,116,139,.12);border:1px solid rgba(100,116,139,.25);color:var(--text3)':'background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);color:#6ee7b7'}">
+            ${s.count_attendance===false?`<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="6" stroke="currentColor" stroke-width="1.3"/><line x1="4" y1="4" x2="9" y2="9" stroke="currentColor" stroke-width="1.4"/></svg> Không tính CC`:`<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="6" stroke="currentColor" stroke-width="1.3"/><polyline points="3.5,6.5 5.5,8.5 9.5,4.5" stroke="currentColor" stroke-width="1.4" fill="none"/></svg> Tính chuyên cần`}
+          </span>
+          <span style="display:inline-flex;align-items:center;gap:.35rem;padding:.45rem .8rem;border-radius:10px;font-size:.78rem;font-weight:700;${s.require_checkin===false?'background:rgba(100,116,139,.12);border:1px solid rgba(100,116,139,.25);color:var(--text3)':'background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);color:#93c5fd'}">
+            ${s.require_checkin===false?`<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="6" stroke="currentColor" stroke-width="1.3"/><line x1="4" y1="4" x2="9" y2="9" stroke="currentColor" stroke-width="1.4"/></svg> Không ĐD`:`<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="6" stroke="currentColor" stroke-width="1.3"/><polyline points="3.5,6.5 5.5,8.5 9.5,4.5" stroke="currentColor" stroke-width="1.4" fill="none"/></svg> Có điểm danh`}
+          </span>`}
+      </div>
+
+      <!-- INFO BOXES -->
+      ${noteBox}
+      ${done?`
+        <div style="display:flex;align-items:center;gap:.6rem;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:.55rem .8rem;margin-bottom:.5rem">
+          <span class="badge ${sm.cls}">${sm.icon} ${sm.label}</span>
+          ${rec.check_in_time?`<span style="font-size:.75rem;color:var(--text3)">${fmtTime(rec.check_in_time)}</span>`:''}
+        </div>
+      `:''}
+      ${isOpen&&!done&&s.require_checkin===false?`
+        <div style="display:flex;align-items:center;gap:.6rem;background:rgba(100,116,139,.07);border:1px solid rgba(100,116,139,.2);border-radius:10px;padding:.55rem .8rem;margin-bottom:.5rem;font-size:.83rem;color:var(--text2)">
+          ✋ Buổi học này không điểm danh.
+        </div>
+      `:''}
+      ${!isOpen&&!done&&s.status==='scheduled'?`
+        <div style="display:flex;align-items:flex-start;gap:.6rem;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:.55rem .8rem;font-size:.83rem;color:var(--text2);line-height:1.6">
+          <span style="flex-shrink:0;margin-top:.05rem">📌</span>
+          <span>Buổi học bắt đầu lúc <strong style="color:var(--text)">${s.start_time||'—'}</strong>${platformLabel?` — học qua <strong style="color:var(--text)">${platformLabel}</strong>`:''}, hãy chuẩn bị trước 5 phút.</span>
+        </div>
+      `:''}
+
+      <!-- ĐỒNG HỒ ĐẾM NGƯỢC -->
+      ${isHome && (isOpen || s.status==='scheduled') ? (()=>{
+        const dateStr = (s.session_date && s.session_date.length >= 10)
+          ? s.session_date.substring(0,10)  // lấy đúng YYYY-MM-DD, bỏ phần dư nếu có
+          : today();
+        const timeStr = isOpen ? (s.end_time||'') : (s.start_time||'');
+        if(!timeStr) return '';
+        // Normalize: "HH:MM" → "HH:MM:00"
+        const tNorm = /^\d{2}:\d{2}$/.test(timeStr) ? timeStr+':00' : timeStr;
+        const ts = new Date(dateStr + 'T' + tNorm).getTime();
+        if(isNaN(ts)) return '';
+        return `
+        <div id="countdown-${s.id}" data-target="${ts}" data-open="${isOpen?'1':'0'}"
+          style="display:flex;align-items:center;justify-content:space-between;
+            background:${isOpen?'rgba(34,197,94,.07)':'rgba(79,143,255,.07)'};
+            border:1px solid ${isOpen?'rgba(34,197,94,.2)':'rgba(79,143,255,.2)'};
+            border-radius:12px;padding:.6rem .9rem;margin-top:.5rem">
+          <div style="display:flex;align-items:center;gap:.45rem;font-size:.78rem;font-weight:600;color:${isOpen?'#86efac':'#93c5fd'}">
+            ${isOpen?'⏳ Đóng sau':'⏰ Mở sau'}
+          </div>
+          <div style="display:flex;align-items:center;gap:.35rem">
+            <span style="background:${isOpen?'rgba(34,197,94,.15)':'rgba(79,143,255,.15)'};color:${isOpen?'#86efac':'#93c5fd'};font-family:monospace;font-size:.92rem;font-weight:800;padding:.25rem .5rem;border-radius:7px;min-width:2.2ch;text-align:center" id="cd-h-${s.id}">--</span>
+            <span style="color:${isOpen?'#86efac':'#93c5fd'};font-weight:800;font-size:.9rem">:</span>
+            <span style="background:${isOpen?'rgba(34,197,94,.15)':'rgba(79,143,255,.15)'};color:${isOpen?'#86efac':'#93c5fd'};font-family:monospace;font-size:.92rem;font-weight:800;padding:.25rem .5rem;border-radius:7px;min-width:2.2ch;text-align:center" id="cd-m-${s.id}">--</span>
+            <span style="color:${isOpen?'#86efac':'#93c5fd'};font-weight:800;font-size:.9rem">:</span>
+            <span style="background:${isOpen?'rgba(34,197,94,.15)':'rgba(79,143,255,.15)'};color:${isOpen?'#86efac':'#93c5fd'};font-family:monospace;font-size:.92rem;font-weight:800;padding:.25rem .5rem;border-radius:7px;min-width:2.2ch;text-align:center" id="cd-s-${s.id}">--</span>
+          </div>
+        </div>`;
+      })() : ''}
+      ${s.session_note?`<div style="margin-top:.5rem;padding:.45rem .75rem;background:rgba(252,211,77,.08);border:1px solid rgba(252,211,77,.2);border-radius:9px;font-size:.8rem;color:#fcd34d;line-height:1.5">📝 ${esc(s.session_note)}</div>`:''}
+    </div>`;
+}
+
+// ── SCHEDULE ─────────────────────────────────────────────────────
+let _schedWeekOffset = 0;   // 0 = tuần hiện tại, 1 = tuần sau, -1 = tuần trước
+let _schedSelectedDate = today();
+let _schedSessions = [];    // cache buổi của tuần đang xem
+let _schedRecMap = {};      // cache records điểm danh của tuần đang xem
+
+function _weekDates(offset){
+  // Dùng today() để lấy ngày local chuẩn, tránh lỗi múi giờ UTC
+  const todayStr = today(); // 'YYYY-MM-DD' theo giờ local
+  const now = new Date(todayStr + 'T00:00:00'); // midnight local
+  const dow = now.getDay()===0 ? 6 : now.getDay()-1; // T2=0 … CN=6
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - dow + offset*7);
+  const days = [];
+  for(let i=0;i<7;i++){
+    const d = new Date(mon);
+    d.setDate(mon.getDate()+i);
+    // Format YYYY-MM-DD theo local time, không dùng toISOString() để tránh UTC shift
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    days.push(`${y}-${m}-${dd}`);
+  }
+  return days;
+}
+
+async function loadSchedule(){
+  await loadMyClasses();
+  if(!myClasses.length){
+    document.getElementById('schedList').innerHTML='<div class="empty"><span>⚠️</span>Chưa được gán lớp</div>';
+    return;
+  }
+
+  // Nếu ngày đang chọn là ngày hôm qua (trang mở qua đêm) → tự động nhảy về hôm nay
+  const realToday = today();
+  if(_schedSelectedDate < realToday && _schedWeekOffset === 0) {
+    _schedSelectedDate = realToday;
+  }
+  const days = _weekDates(_schedWeekOffset);
+  const monStr = days[0], sunStr = days[6];
+
+  // Label tuần
+  const fmtShort = d => { const [,m,dd]=d.split('-'); return `${dd}/${m}`; };
+  document.getElementById('schedWeekLabel').textContent = `${fmtShort(monStr)} – ${fmtShort(sunStr)}`;
+
+  // Render strip ngày
+  _renderSchedStrip(days);
+
+  // Fetch buổi học trong tuần (tất cả status)
+  const {data} = await db.from('dd_sessions')
+    .select('*')
+    .in('class_name', myClasses)
+    .gte('session_date', monStr)
+    .lte('session_date', sunStr)
+    .order('session_date').order('start_time');
+  _schedSessions = data||[];
+
+  // Fetch records điểm danh của tôi trong tuần
+  const sessIds = _schedSessions.map(s=>s.id);
+  if(sessIds.length){
+    const {data:recs} = await db.from('dd_records').select('*').eq('username',_u).in('session_id',sessIds);
+    _schedRecMap = Object.fromEntries((recs||[]).map(r=>[r.session_id,r]));
+  } else {
+    _schedRecMap = {};
+  }
+
+  // Nếu ngày đang chọn không nằm trong tuần mới → reset về T2 của tuần
+  if(!days.includes(_schedSelectedDate)) _schedSelectedDate = days[0];
+
+  _renderSchedStrip(days); // re-render để highlight active
+  _renderSchedDay();
+}
+
+function _renderSchedStrip(days){
+  const DOW_SHORT=['CN','T2','T3','T4','T5','T6','T7'];
+  const todayStr = today();
+  const strip = document.getElementById('schedStrip');
+  strip.innerHTML = days.map(d=>{
+    const dow = new Date(d+'T00:00:00').getDay();
+    const isToday = d===todayStr;
+    const isSelected = d===_schedSelectedDate;
+    const hasSess = _schedSessions.some(s=>s.session_date===d);
+    return `<button onclick="schedSelectDay('${d}')" style="
+      display:flex;flex-direction:column;align-items:center;gap:.2rem;
+      padding:.5rem .25rem;border-radius:11px;border:none;cursor:pointer;
+      background:${isSelected?'var(--accent)':isToday?'rgba(59,130,246,.12)':'var(--card)'};
+      border:1.5px solid ${isSelected?'var(--accent)':isToday?'rgba(59,130,246,.3)':'var(--border)'};
+      transition:all .15s;
+    ">
+      <span style="font-size:.62rem;font-weight:700;color:${isSelected?'rgba(255,255,255,.8)':'var(--text3)'}">${DOW_SHORT[dow]}</span>
+      <span style="font-size:.95rem;font-weight:900;color:${isSelected?'#fff':isToday?'var(--accent)':'var(--text)'}">${d.split('-')[2]}</span>
+      <span style="width:5px;height:5px;border-radius:50%;background:${hasSess?(isSelected?'#fff':'var(--accent)'):'transparent'}"></span>
+    </button>`;
+  }).join('');
+}
+
+function schedSelectDay(date){
+  _schedSelectedDate = date;
+  const days = _weekDates(_schedWeekOffset);
+  _renderSchedStrip(days);
+  _renderSchedDay();
+}
+
+function _renderSchedDay(){
+  const DOW_FULL = ['Chủ nhật','Thứ hai','Thứ ba','Thứ tư','Thứ năm','Thứ sáu','Thứ bảy'];
+  const d = new Date(_schedSelectedDate+'T00:00:00');
+  const todayStr = today();
+  const isToday = _schedSelectedDate===todayStr;
+  const isPast  = _schedSelectedDate<todayStr;
+
+  document.getElementById('schedDayLabel').textContent =
+    `${DOW_FULL[d.getDay()]} – ${fmtDate(_schedSelectedDate)}`+(isToday?' (Hôm nay)':isPast?' (Đã qua)':'');
+
+  const sessions = _schedSessions.filter(s=>s.session_date===_schedSelectedDate);
+  const el = document.getElementById('schedList');
+
+  if(!sessions.length){
+    el.innerHTML=`<div style="text-align:center;padding:2rem 1rem;color:var(--text3);font-size:.88rem">
+      ${isPast?'📘 Không có buổi học ngày này':'📭 Chưa có lịch học ngày này'}
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = sessions.map(s=> renderSessCard(s, _schedRecMap[s.id]||null, false, false)).join('');
+  setTimeout(()=>{ if(window._cdTick) window._cdTick(); }, 50);
+}
+
+function schedPrev(){ _schedWeekOffset--; loadSchedule(); }
+function schedNext(){ _schedWeekOffset++; loadSchedule(); }
+function schedGoToday(){ _schedWeekOffset=0; _schedSelectedDate=today(); loadSchedule(); }
+
+// ── ATTENDANCE LOG ───────────────────────────────────────────────
+async function showAttendanceLog(sessionId, sessionTitle) {
+  const modal = document.getElementById('absenceDetailModal');
+  const body = document.getElementById('absenceDetailBody');
+  const footer = document.getElementById('absenceDetailFooter');
+
+  if(!modal || !body || !footer) {
+    // Fallback: hiện toast nếu modal không tồn tại
+    toast('📋 Không thể mở lịch sử — modal không tìm thấy', 'err');
+    return;
+  }
+
+  modal.querySelector('h3').textContent = '📋 Lịch sử điểm danh';
+  body.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text3)">⏳ Đang tải...</div>';
+  footer.innerHTML = `<button class="btn btn-ghost btn-sm" onclick="closeModal('absenceDetailModal')">Đóng</button>`;
+  modal.classList.add('open');
+
+  const {data:rec} = await db.from('dd_records')
+    .select('status, check_in_time, updated_at, created_at, note')
+    .eq('username', _u)
+    .eq('session_id', sessionId)
+    .single();
+
+  if(!rec) {
+    body.innerHTML = `
+      <div style="text-align:center;padding:1.5rem">
+        <div style="font-size:2rem;margin-bottom:.5rem">📭</div>
+        <div style="color:var(--text3);font-size:.88rem">Chưa có lịch sử điểm danh cho buổi này</div>
+      </div>`;
+    return;
+  }
+
+  const statusMap = {
+    present: {icon:'✅', label:'Có mặt', color:'#86efac'},
+    late:    {icon:'⏰', label:'Đi muộn', color:'#fde68a'},
+    absent:  {icon:'❌', label:'Vắng mặt', color:'#fca5a5'},
+    excused: {icon:'📋', label:'Có phép', color:'#c4b5fd'},
+  };
+  const sm = statusMap[rec.status] || statusMap.absent;
+
+  body.innerHTML = `
+    <div style="padding:.5rem 0">
+      <div style="font-size:.82rem;color:var(--text3);margin-bottom:.75rem">📚 ${esc(sessionTitle)}</div>
+      <div style="display:flex;flex-direction:column;gap:.6rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.7rem .9rem;background:var(--bg3);border:1px solid var(--border);border-radius:12px">
+          <span style="font-size:.85rem;color:var(--text2)">Trạng thái</span>
+          <span style="font-weight:800;color:${sm.color}">${sm.icon} ${sm.label}</span>
+        </div>
+        ${rec.check_in_time ? `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.7rem .9rem;background:var(--bg3);border:1px solid var(--border);border-radius:12px">
+          <span style="font-size:.85rem;color:var(--text2)">Giờ điểm danh</span>
+          <span style="font-weight:700;color:var(--text)">${new Date(rec.check_in_time).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
+        </div>` : ''}
+        ${rec.created_at ? `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.7rem .9rem;background:var(--bg3);border:1px solid var(--border);border-radius:12px">
+          <span style="font-size:.85rem;color:var(--text2)">Tạo lúc</span>
+          <span style="font-size:.82rem;color:var(--text3)">${new Date(rec.created_at).toLocaleString('vi-VN')}</span>
+        </div>` : ''}
+        ${rec.updated_at && rec.updated_at !== rec.created_at ? `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.7rem .9rem;background:var(--bg3);border:1px solid var(--border);border-radius:12px">
+          <span style="font-size:.85rem;color:var(--text2)">Cập nhật lần cuối</span>
+          <span style="font-size:.82rem;color:var(--text3)">${new Date(rec.updated_at).toLocaleString('vi-VN')}</span>
+        </div>` : ''}
+        ${rec.note ? `
+        <div style="padding:.7rem .9rem;background:rgba(252,211,77,.07);border:1px solid rgba(252,211,77,.2);border-radius:12px">
+          <div style="font-size:.75rem;color:var(--text3);margin-bottom:.2rem">Ghi chú</div>
+          <div style="font-size:.85rem;color:#fcd34d">${esc(rec.note)}</div>
+        </div>` : ''}
+      </div>
+    </div>`;
+}
+
+// ── HISTORY ─────────────────────────────────────────────────────
+async function loadHistory(){
+  await loadMyClasses();
+  if(!myClasses.length){document.getElementById('historyList').innerHTML='<div class="empty"><span>⚠️</span>Chưa được gán lớp</div>';return;}
+  const {data:sessions}=await db.from('dd_sessions').select('*').in('class_name',myClasses).neq('status','scheduled').order('session_date',{ascending:false}).order('start_time',{ascending:false}).limit(50);
+  const {data:recs}=await db.from('dd_records').select('*').eq('username',_u);
+  const recMap=Object.fromEntries((recs||[]).map(r=>[r.session_id,r]));
+  const el=document.getElementById('historyList');
+  if(!(sessions||[]).length){el.innerHTML='<div class="empty"><span>📭</span>Chưa có lịch sử nào</div>';return;}
+  el.innerHTML=(sessions||[]).map(s=>{
+    const rec=recMap[s.id];
+    const sm=rec?(STATUS[rec.status]||STATUS.absent):STATUS.absent;
+    const isOpen=s.status==='open';
+    const done=rec&&(rec.status==='present'||rec.status==='late'||rec.status==='excused');
+    return `
+      <div class="hist-item">
+        <div class="hist-ico">${sm.icon}</div>
+        <div class="hist-info">
+          <div class="hist-title">${esc(s.title)}</div>
+          <div class="hist-sub">📅 ${fmtDate(s.session_date)} · ${esc(s.class_name)}</div>
+          ${isOpen&&done?`<div style="margin-top:.35rem;display:flex;flex-direction:column;gap:.3rem">${renderLiveBtns(s)}</div>`:''}
+        </div>
+        <div class="hist-right">
+          <span class="badge ${sm.cls}">${sm.icon} ${sm.label}</span>
+          ${rec?.check_in_time?`<span class="hist-time">${fmtTime(rec.check_in_time)}</span>`:''}
+          ${isOpen&&(!rec||rec.status==='absent')?`<button onclick="openCheckin(${s.id})" style="font-size:.74rem;font-weight:700;color:var(--accent);background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);border-radius:7px;padding:.25rem .6rem;cursor:pointer">✍️ Điểm danh</button>`:''}
+          ${rec?`<button onclick="showAttendanceLog(${s.id},'${esc(s.title).replace(/'/g,"\\'")}')" style="font-size:.7rem;font-weight:600;color:var(--text3);background:var(--card);border:1px solid var(--border);border-radius:7px;padding:.2rem .55rem;cursor:pointer">📋</button>`:''}
+
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── ABSENCE ─────────────────────────────────────────────────────
+function _getCurrentWeekRange(){
+  // Dùng today() làm base để tránh UTC shift múi giờ VN
+  const todayStr = today();
+  const now = new Date(todayStr+'T00:00:00');
+  const dow = now.getDay(); // 0=CN, 1=T2...6=T7
+  const diffToMon = dow === 0 ? -6 : 1 - dow;
+  const mon = new Date(now);
+  mon.setDate(now.getDate() + diffToMon);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  // Format local date an toàn
+  const fmt = d => {
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
+  };
+  return { from: fmt(mon), to: fmt(sun) };
+}
+
+async function loadAbsenceSessions(){
+  await loadMyClasses();
+  const { from, to } = _getCurrentWeekRange();
+  const {data:sessions}=await db.from('dd_sessions').select('*')
+    .in('class_name',myClasses)
+    .in('status',['scheduled','open'])
+    .gte('session_date', from)
+    .lte('session_date', to)
+    .order('session_date').order('start_time');
+  let available=sessions||[];
+  if(available.length){
+    const ids=available.map(s=>s.id);
+    const [{data:myRecs},{data:myAbs}]=await Promise.all([
+      db.from('dd_records').select('session_id,status').eq('username',_u).in('session_id',ids),
+      db.from('dd_absences').select('session_id').eq('username',_u).in('session_id',ids),
+    ]);
+    const attendedIds=new Set((myRecs||[]).filter(r=>r.status==='present'||r.status==='late').map(r=>r.session_id));
+    const absIds=new Set((myAbs||[]).map(r=>r.session_id));
+    available=available.filter(s=>!attendedIds.has(s.id)&&!absIds.has(s.id));
+  }
+  // Lọc buổi được phép xin vắng:
+  // - allow_absence === true (hoặc undefined/null = mặc định cho phép — backward compat)
+  // - Nếu allow_absence === false thì không hiện dù count_attendance hay require_checkin là gì
+  available=available.filter(s=>s.allow_absence !== false);
+  const sel=document.getElementById('absSessSelect');
+  if(!available.length){
+    sel.innerHTML=`<option value="">Không có buổi cần báo vắng trong tuần này (${from} → ${to})</option>`;
+    return;
+  }
+  sel.innerHTML='<option value="">-- Chọn buổi học --</option>'
+    +available.map(s=>`<option value="${s.id}">${esc(s.title)} — ${fmtDate(s.session_date)} (${s.start_time||''})</option>`).join('');
+}
+
+async function loadMyAbsences(){
+  const {data}=await db.from('dd_absences').select('*,dd_sessions(title,session_date)').eq('username',_u).order('created_at',{ascending:false});
+  const el=document.getElementById('myAbsenceList');
+  if(!(data||[]).length){el.innerHTML='<div class="empty" style="padding:1.25rem"><span style="font-size:1.8rem">📭</span>Chưa có đơn nào</div>';return;}
+  const statusMap={
+    pending:{cls:'badge-pending',label:'⏳ Chờ duyệt'},
+    approved:{cls:'badge-approved',label:'✅ Đã duyệt'},
+    rejected:{cls:'badge-rejected',label:'❌ Từ chối'},
+  };
+  el.innerHTML=(data||[]).map(a=>{
+    const st=statusMap[a.status]||statusMap.pending;
+    return `<div class="abs-item">
+      <div class="abs-info">
+        <div class="abs-title">${esc(a.dd_sessions?.title||'—')}</div>
+        <div class="abs-sub">📅 ${fmtDate(a.dd_sessions?.session_date)} · ${REASON_LABELS[a.reason_type]||a.reason_type}</div>
+        ${a.reason_detail?`<div style="font-size:.78rem;color:var(--text3);margin-top:.15rem">${esc(a.reason_detail)}</div>`:''}
+        ${a.admin_note?`<div style="font-size:.78rem;color:var(--yellow);margin-top:.2rem">📝 GV: ${esc(a.admin_note)}</div>`:''}
+      </div>
+      <span class="badge ${st.cls}" style="flex-shrink:0">${st.label}</span>
+    </div>`;
+  }).join('');
+}
+
+async function submitAbsence(){
+  const sessId=document.getElementById('absSessSelect').value;
+  const reason=document.querySelector('input[name="absReason"]:checked')?.value;
+  const detail=document.getElementById('absDetail').value.trim();
+  const errEl=document.getElementById('absError');
+  if(!sessId){errEl.textContent='Vui lòng chọn buổi học';errEl.style.display='';return;}
+  if(!reason){errEl.textContent='Vui lòng chọn lý do';errEl.style.display='';return;}
+  errEl.style.display='none';
+  const btn=document.getElementById('absBtnText'); btn.textContent='⏳ Đang gửi...';
+  await loadMyClasses();
+  const [{data:st},{data:sess}]=await Promise.all([
+    db.from('students').select('full_name,class_name').eq('username',_u).single(),
+    db.from('dd_sessions').select('class_name').eq('id',sessId).single(),
+  ]);
+  const {error}=await db.from('dd_absences').upsert({
+    session_id:parseInt(sessId),username:_u,
+    student_name:st?.full_name||_n,class_name:sess?.class_name||'',
+    reason_type:reason,reason_detail:detail||null,status:'pending',
+  },{onConflict:'session_id,username'});
+  btn.textContent='📩 Gửi đơn xin vắng';
+  if(error){errEl.textContent='Lỗi: '+error.message;errEl.style.display='';return;}
+  toast('📩 Đã gửi đơn — đang chờ giáo viên duyệt','ok');
+  document.getElementById('absSessSelect').value='';
+  document.querySelectorAll('input[name="absReason"]').forEach(r=>r.checked=false);
+  document.getElementById('absDetail').value='';
+  loadMyAbsences();
+}
+
+// ── STATS ────────────────────────────────────────────────────────
+async function loadStats(){
+  await loadMyClasses();
+  if(!myClasses.length) return;
+  const [{data:sessions},{data:recs}]=await Promise.all([
+    db.from('dd_sessions').select('*').in('class_name',myClasses).neq('status','scheduled').order('session_date',{ascending:false}),
+    db.from('dd_records').select('*').eq('username',_u),
+  ]);
+  const recMap=Object.fromEntries((recs||[]).map(r=>[r.session_id,r]));
+
+  // Chỉ tính chuyên cần cho buổi có count_attendance !== false
+  const countedSessions=(sessions||[]).filter(s=>s.count_attendance!==false);
+  const countedIds=new Set(countedSessions.map(s=>s.id));
+
+  const total=countedSessions.length;
+  const present=(recs||[]).filter(r=>countedIds.has(r.session_id)&&(r.status==='present'||r.status==='late')).length;
+  // Chỉ đếm excused thuộc buổi tính chuyên cần
+  const excused=(recs||[]).filter(r=>countedIds.has(r.session_id)&&r.status==='excused').length;
+  // Vắng = tổng buổi tính CC - có mặt - có phép (clamp 0 để không bao giờ âm)
+  const absent=Math.max(0, total - present - excused);
+  const rate=total>0?Math.round(present/total*100):0;
+  document.getElementById('sSTotal').textContent=total;
+  document.getElementById('sSPresent').textContent=present;
+  document.getElementById('sSExcused').textContent=excused;
+  document.getElementById('sSAbsent').textContent=absent;
+  document.getElementById('sSRate').textContent=rate+'%';
+  document.getElementById('sSRate').style.color=rate>=80?'var(--green)':rate>=60?'var(--yellow)':'var(--red)';
+  const bar=document.getElementById('sSRateBar');
+  bar.style.width=rate+'%';
+  bar.style.background=rate>=80?'var(--green)':rate>=60?'var(--yellow)':'var(--red)';
+
+  // ── FEATURE 4: Streak ──────────────────────────────────────────
+  const sortedCounted = countedSessions
+    .filter(s => s.session_date)
+    .sort((a,b) => (b.session_date > a.session_date ? 1 : -1)); // mới nhất trước
+
+  let streak = 0;
+  for(const s of sortedCounted) {
+    const rec = recMap[s.id];
+    if(rec && (rec.status==='present'||rec.status==='late'||rec.status==='excused')) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  let bestStreak = 0, cur = 0;
+  const sortedAsc = [...sortedCounted].reverse();
+  for(const s of sortedAsc) {
+    const rec = recMap[s.id];
+    if(rec && (rec.status==='present'||rec.status==='late'||rec.status==='excused')) {
+      cur++; if(cur > bestStreak) bestStreak = cur;
+    } else { cur = 0; }
+  }
+
+  const streakEl = document.getElementById('sStreak');
+  if(streakEl) streakEl.textContent = streak;
+  const bestStreakEl = document.getElementById('sBestStreak');
+  if(bestStreakEl) bestStreakEl.textContent = bestStreak;
+
+  // ── FEATURE 3: Chart theo tháng ───────────────────────────────
+  const monthMap = {};
+  (sessions||[]).filter(s=>s.count_attendance!==false).forEach(s => {
+    const ym = (s.session_date||'').substring(0,7);
+    if(!ym) return;
+    if(!monthMap[ym]) monthMap[ym] = { total:0, present:0 };
+    monthMap[ym].total++;
+    const rec = recMap[s.id];
+    if(rec && (rec.status==='present'||rec.status==='late'||rec.status==='excused')) monthMap[ym].present++;
+  });
+  const months = Object.keys(monthMap).sort().slice(-6);
+  const chartEl = document.getElementById('statsChart');
+  if(months.length > 1) {
+    chartEl.innerHTML = `
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:18px;padding:1.1rem 1rem">
+        <div style="font-size:.75rem;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:1rem">📊 Theo dõi theo tháng</div>
+        <div style="display:flex;align-items:flex-end;gap:.5rem;height:80px">
+          ${months.map(ym => {
+            const d = monthMap[ym];
+            const pct = d.total > 0 ? Math.round(d.present/d.total*100) : 0;
+            const color = pct>=80?'var(--green)':pct>=60?'var(--yellow)':'var(--red)';
+            const label = ym.substring(5,7)+'/'+ym.substring(2,4);
+            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:.3rem">
+              <span style="font-size:.65rem;font-weight:700;color:${color}">${pct}%</span>
+              <div style="width:100%;background:rgba(255,255,255,.05);border-radius:6px 6px 0 0;height:60px;display:flex;align-items:flex-end;overflow:hidden">
+                <div style="width:100%;height:${pct}%;background:${color};border-radius:6px 6px 0 0;transition:height .8s cubic-bezier(.22,1,.36,1);min-height:${pct>0?2:0}px"></div>
+              </div>
+              <span style="font-size:.62rem;color:var(--text3)">${label}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  } else {
+    chartEl.innerHTML = '';
+  }
+
+  const el=document.getElementById('statsDetail');
+  if(!total){el.innerHTML='<div class="empty"><span>📊</span>Chưa có dữ liệu</div>';return;}
+  el.innerHTML=(sessions||[]).map(s=>{
+    const rec=recMap[s.id];
+    const sm=rec?(STATUS[rec.status]||STATUS.absent):STATUS.absent;
+    const notCounted=s.count_attendance===false;
+    return `<div style="display:flex;align-items:center;gap:.75rem;padding:.75rem .9rem;border-radius:12px;background:var(--card);border:1px solid var(--border);margin-bottom:.5rem${notCounted?';opacity:.55':''}">
+      <span style="font-size:1.1rem">${sm.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.title)}</div>
+        <div style="font-size:.75rem;color:var(--text2)">${fmtDate(s.session_date)} · ${esc(s.class_name)}${notCounted?' · <span style="color:var(--text3)">Không tính CC</span>':''}</div>
+      </div>
+      <span class="badge ${sm.cls}">${sm.label}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── PROFILE ─────────────────────────────────────────────────────
+async function loadProfile(){
+  const {data:st}=await db.from('students').select('full_name,class_name,student_code,username,created_at').eq('username',_u).single();
+  document.getElementById('profileNameMob').textContent=st?.full_name||_n||'—';
+  document.getElementById('profileClassMob').textContent=st?.class_name?'🎓 '+st.class_name:'';
+  document.getElementById('profileRows').innerHTML=[
+    {l:'Họ tên',v:st?.full_name||'—'},
+    {l:'Gmail',v:st?.username||'—'},
+    {l:'Mã học viên',v:st?.student_code||'—'},
+    {l:'Lớp',v:st?.class_name||'—'},
+    {l:'Ngày tạo',v:st?.created_at?new Date(st.created_at).toLocaleDateString('vi-VN'):'—'},
+  ].map(r=>`<div class="profile-row"><span class="profile-row-lbl">${r.l}</span><strong style="font-size:.88rem">${esc(r.v)}</strong></div>`).join('');
+}
+
+function doLogout(){
+  db.from('students').update({is_online:false,last_seen:new Date().toISOString()}).eq('username',_u).then(()=>{
+    sessionStorage.clear();
+    localStorage.removeItem('dh_user');
+    localStorage.removeItem('dh_role');
+    localStorage.removeItem('dh_name');
+    location.href='login.html';
+  });
+}
+
+// ── CHECK-IN ─────────────────────────────────────────────────────
+let _curSess=null;
+function openCheckin(idOrObj){
+  // Hỗ trợ cả truyền ID (số) lẫn object trực tiếp (backward compat)
+  _curSess = (typeof idOrObj === 'number' || typeof idOrObj === 'string')
+    ? _sessCache.get(Number(idOrObj))
+    : idOrObj;
+  if(!_curSess){ console.error('openCheckin: không tìm thấy session', idOrObj); return; }
+  const d=new Date(_curSess.session_date+'T00:00:00').toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit'});
+  document.getElementById('sheetTitle').textContent=_curSess.title;
+  document.getElementById('sheetSub').textContent=`📅 ${d}${_curSess.start_time?' · 🕐 '+_curSess.start_time:''}`;
+  const inp=document.getElementById('hvCodeInput');
+  inp.value=sessionStorage.getItem('dh_code')||'';
+  document.getElementById('checkinErr').style.display='none';
+  document.getElementById('checkinErr').textContent='';
+  document.getElementById('checkinBtn').disabled=false;
+  document.getElementById('checkinBtnTxt').textContent='✅ Xác nhận điểm danh';
+  document.getElementById('checkinSheet').classList.add('open');
+  // Auto-focus sau animation
+  setTimeout(()=>{ inp.focus(); if(inp.value) inp.select(); },300);
+  inp.onkeydown=e=>{ if(e.key==='Enter') submitCheckin(); };
+}
+function closeCheckin(){ document.getElementById('checkinSheet').classList.remove('open'); }
+
+// Generic close cho sheet-overlay / modal
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+function closeSuccess(){
+  document.getElementById('successSheet').classList.remove('open');
+  loadHome(); loadHistory();
+}
+
+async function submitCheckin(){
+  const hvCode=document.getElementById('hvCodeInput').value.trim();
+  const errEl=document.getElementById('checkinErr');
+  const btn=document.getElementById('checkinBtn');
+  if(!hvCode){errEl.textContent='Vui lòng nhập mã học viên';errEl.style.display='';return;}
+  btn.disabled=true;
+  document.getElementById('checkinBtnTxt').innerHTML='<span style="display:inline-block;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:.35rem"></span>Đang xử lý...';
+  try{
+    const {data:st}=await db.from('students').select('full_name,student_code,class_name').eq('username',_u).single();
+    const validCode=(st?.student_code||'').trim().toLowerCase();
+    if(!validCode||hvCode.toLowerCase()!==validCode){
+      errEl.textContent='❌ Mã học viên không đúng — kiểm tra lại';
+      errEl.style.display='';
+      btn.disabled=false;
+      document.getElementById('checkinBtnTxt').textContent='✅ Xác nhận điểm danh';
+      return;
+    }
+    const {data:fresh}=await db.from('dd_sessions').select('status,meet_link,live_link,live_type,platform_type').eq('id',_curSess.id).single();
+    if(!fresh||fresh.status!=='open'){
+      errEl.textContent='❌ Buổi học đã đóng điểm danh';
+      errEl.style.display='';
+      btn.disabled=false;
+      document.getElementById('checkinBtnTxt').textContent='✅ Xác nhận điểm danh';
+      return;
+    }
+    // Xác định muộn/đúng giờ
+    let attendStatus='present';
+    if(_curSess.start_time&&_curSess.session_date){
+      const startDt=new Date(_curSess.session_date+'T'+_curSess.start_time);
+      if((new Date()-startDt)/60000>30) attendStatus='late';
+    }
+    const {error}=await db.from('dd_records').upsert({
+      session_id:_curSess.id,username:_u,
+      student_name:st?.full_name||_n,class_name:_curSess.class_name,
+      status:attendStatus,check_in_time:new Date().toISOString(),
+      device:/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)?'Mobile':'Desktop',
+      updated_at:new Date().toISOString(),
+    },{onConflict:'session_id,username'});
+    if(error) throw error;
+    // Reset counter nhập sai sau khi điểm danh thành công
+    delete _wrongCodeCount[_curSess.id];
+    closeCheckin();
+    document.getElementById('sucSess').textContent='📚 '+_curSess.title;
+    document.getElementById('sucTime').textContent=(attendStatus==='late'?'⏰ Đi muộn — ':'✅ Đúng giờ — ')+new Date().toLocaleTimeString('vi-VN');
+    const meetLink=fresh.status==='open'?(fresh.meet_link||_curSess.meet_link||''):'';
+    const liveLink=fresh.status==='open'?(fresh.live_link||_curSess.live_link||''):'';
+    const liveType=fresh.live_type||_curSess.live_type||'';
+    const mWrap=document.getElementById('sucMeetWrap');
+    // Xây nút dynamic
+    let liveBtnsHtml = '';
+    if(meetLink){ liveBtnsHtml += `<a href="${meetLink}" target="_blank" rel="noopener" class="btn-meet">🎥 Vào Google Meet ngay</a>`; }
+    if(liveLink && liveType){
+      const m = {tiktok:{icon:'🎵',label:'Xem TikTok Live',color:'#f472b6',bg:'rgba(244,114,182,.15)',border:'rgba(244,114,182,.3)'},youtube:{icon:'▶️',label:'Xem YouTube Live',color:'#f87171',bg:'rgba(248,113,113,.12)',border:'rgba(248,113,113,.3)'},zoom:{icon:'💻',label:'Vào Zoom',color:'#60a5fa',bg:'rgba(59,130,246,.12)',border:'rgba(59,130,246,.3)'},other:{icon:'🔗',label:'Vào lớp trực tiếp',color:'#a3e635',bg:'rgba(163,230,53,.1)',border:'rgba(163,230,53,.25)'}}[liveType]||{icon:'🔗',label:'Vào lớp',color:'#a3e635',bg:'rgba(163,230,53,.1)',border:'rgba(163,230,53,.25)'};
+      liveBtnsHtml += `<a href="${liveLink}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.85rem;border-radius:13px;background:${m.bg};border:1px solid ${m.border};color:${m.color};font-size:.92rem;font-weight:800;text-decoration:none;margin-bottom:.75rem">${m.icon} ${m.label}</a>`;
+    }
+    mWrap.style.display = liveBtnsHtml ? '' : 'none';
+    mWrap.innerHTML = liveBtnsHtml;
+    document.getElementById('successSheet').classList.add('open');
+  } catch(e){
+    errEl.textContent='Lỗi: '+e.message;
+    errEl.style.display='';
+    btn.disabled=false;
+    document.getElementById('checkinBtnTxt').textContent='✅ Xác nhận điểm danh';
+  }
+}
+
+// ── Swipe-to-close sheet ──────────────────────────────────────────
+(function(){
+  let startY=0,isDrag=false;
+  ['checkinSheet','successSheet'].forEach(id=>{
+    const overlay=document.getElementById(id);
+    const sheet=overlay?.querySelector('.sheet');
+    if(!sheet) return;
+    sheet.addEventListener('touchstart',e=>{
+      const t=e.touches[0];
+      if(sheet.scrollTop>0) return;
+      startY=t.clientY; isDrag=true;
+    },{passive:true});
+    sheet.addEventListener('touchmove',e=>{
+      if(!isDrag) return;
+      const dy=e.touches[0].clientY-startY;
+      if(dy>0) sheet.style.transform=`translateY(${dy}px)`;
+    },{passive:true});
+    sheet.addEventListener('touchend',e=>{
+      if(!isDrag) return; isDrag=false;
+      const dy=e.changedTouches[0].clientY-startY;
+      sheet.style.transform='';
+      if(dy>80){
+        if(id==='checkinSheet') closeCheckin();
+        else closeSuccess();
+      }
+    });
+  });
+  // Tap overlay to close
+  document.getElementById('checkinSheet')?.addEventListener('click',e=>{
+    if(e.target===document.getElementById('checkinSheet')) closeCheckin();
+  });
+  document.getElementById('successSheet')?.addEventListener('click',e=>{
+    if(e.target===document.getElementById('successSheet')) closeSuccess();
+  });
+})();
+
+// ── Realtime: reload khi buổi mở/đóng ──────────────────────────
+db.channel('dd-student-watch')
+  .on('postgres_changes',{event:'UPDATE',schema:'public',table:'dd_sessions'},()=>{
+    if(document.getElementById('pageHome').classList.contains('active')) loadHome();
+  })
+  .subscribe();
+
+// ── Tự động detect qua ngày mới mỗi 60 giây ──────────────────────
+setInterval(()=>{
+  if(_checkDateChange()){
+    // Ngày vừa thay đổi — reload trang đang active
+    const activeTab = document.querySelector('.page.active')?.id?.replace('page','').toLowerCase();
+    if(activeTab === 'home')     loadHome();
+    if(activeTab === 'schedule') loadSchedule();
+    if(activeTab === 'absence')  { loadAbsenceSessions(); loadMyAbsences(); }
+  }
+}, 60000);
+
+// ── Cập nhật badge "Đang mở" trên mobile header ─────────────────
+function _updateLiveBadge(hasOpen){
+  const badge = document.getElementById('mobLiveBadge');
+  const navBadge = document.getElementById('bnav-live-badge');
+  if(badge) badge.classList.toggle('show', !!hasOpen);
+  if(navBadge){ navBadge.style.display = hasOpen ? '' : 'none'; navBadge.textContent = '●'; }
+}
+
+// ── Pull-to-refresh (mobile) ─────────────────────────────────────
+(function _initPTR(){
+  if(window.innerWidth > 599) return; // chỉ mobile
+  let startY = 0, pulling = false, threshold = 72;
+  const indicator = document.getElementById('ptrIndicator');
+  const mainEl = document.documentElement;
+
+  document.addEventListener('touchstart', e => {
+    if(mainEl.scrollTop > 0) return;
+    startY = e.touches[0].clientY;
+    pulling = true;
+  }, {passive:true});
+
+  document.addEventListener('touchmove', e => {
+    if(!pulling) return;
+    const dy = e.touches[0].clientY - startY;
+    if(dy > 20 && mainEl.scrollTop <= 0) indicator?.classList.add('show');
+  }, {passive:true});
+
+  document.addEventListener('touchend', e => {
+    if(!pulling) return;
+    pulling = false;
+    const dy = e.changedTouches[0].clientY - startY;
+    if(dy >= threshold && mainEl.scrollTop <= 0){
+      const activeTab = document.querySelector('.page.active')?.id?.replace('page','').toLowerCase();
+      if(activeTab === 'home') loadHome();
+      else if(activeTab === 'history') loadHistory();
+      else if(activeTab === 'schedule') loadSchedule();
+      else if(activeTab === 'stats') loadStats();
+      setTimeout(()=>indicator?.classList.remove('show'), 800);
+    } else {
+      indicator?.classList.remove('show');
+    }
+  }, {passive:true});
+})();
+
+// ── Init ────────────────────────────────────────────────────────
+loadHome();
+
+// ── MORE MENU ───────────────────────────────────────────────────
+function toggleMoreMenu(){
+  const menu = document.getElementById('moreMenu');
+  const overlay = document.getElementById('moreMenuOverlay');
+  const isOpen = menu.style.display === 'block';
+  menu.style.display = isOpen ? 'none' : 'block';
+  overlay.style.display = isOpen ? 'none' : 'block';
+  document.getElementById('bnav-more').classList.toggle('active', !isOpen);
+}
+
+// ── COUNTDOWN ENGINE ────────────────────────────────────────────
+(function startCountdownEngine(){
+  function pad(n){ return String(n).padStart(2,'0'); }
+
+  window._cdTick = function tick(){
+    const now = Date.now();
+    document.querySelectorAll('[id^="countdown-"]').forEach(el => {
+      const id     = el.id.replace('countdown-','');
+      const target = parseInt(el.dataset.target, 10);
+      if(!target || isNaN(target)) return;
+
+      const hEl = document.getElementById('cd-h-'+id);
+      const mEl = document.getElementById('cd-m-'+id);
+      const sEl = document.getElementById('cd-s-'+id);
+      if(!hEl || !mEl || !sEl) return;
+
+      const diff = target - now;
+      if(diff <= 0){
+        hEl.textContent = '00';
+        mEl.textContent = '00';
+        sEl.textContent = '00';
+        if(diff > -3000) setTimeout(()=>{ if(document.querySelector('#pageHome.active')) loadHome(); }, 2000);
+        return;
+      }
+
+      const totalSec = Math.floor(diff / 1000);
+      hEl.textContent = pad(Math.floor(totalSec / 3600));
+      mEl.textContent = pad(Math.floor((totalSec % 3600) / 60));
+      sEl.textContent = pad(totalSec % 60);
+    });
+  };
+
+  // Delay lần đầu để DOM load xong
+  setTimeout(window._cdTick, 100);
+  setInterval(window._cdTick, 1000);
+})();
+</script>
+
+<!-- ══ FOOTER BẢN QUYỀN ══ -->
+<footer style="
+  position:relative;z-index:1;
+  text-align:center;
+  padding:1.5rem 1.25rem calc(var(--nav-h) + 1.5rem + var(--safe-b));
+  border-top:1px solid rgba(255,255,255,.06);
+  margin-top:.5rem;
+">
+  <div style="font-size:.7rem;font-weight:700;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.4rem">
+    © Bản quyền
+  </div>
+  <p style="font-size:.75rem;color:var(--text3);line-height:1.65;max-width:400px;margin:0 auto">
+    Trang Điểm Danh thuộc quyền sở hữu của <strong style="color:var(--text2)">DHDT LMS</strong>,
+    được phát triển và đồng hành bởi <strong style="color:var(--text2)">Trần Cường</strong>.<br/>
+    Nghiêm cấm mọi hành vi sao chép, sử dụng, chỉnh sửa, phân phối hoặc phát hành lại
+    dưới bất kỳ hình thức nào khi chưa được sự cho phép của chủ sở hữu.
+  </p>
+  <div style="margin-top:.65rem;font-size:.72rem;color:rgba(255,255,255,.18);font-weight:600;letter-spacing:.03em">
+    © DHDT LMS &amp; Trần Cường — All Rights Reserved.
+  </div>
+</footer>
+
+</body>
+</html>

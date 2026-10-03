@@ -1,8 +1,5 @@
 // Khởi tạo Supabase client
-const db = supabase.createClient(
-  'https://gojpmogjretoxplydjvg.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvanBtb2dqcmV0b3hwbHlkanZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0Nzg4ODEsImV4cCI6MjA5MzA1NDg4MX0.iLCNd2VRMiZoFp6_KclZlFsOenUNoM041tl1fobHKDA'
-);
+const db = DH_CFG.createDb();
 
 // ---- Giải mã link AES-GCM ----
 const _ENC_KEY = 'DHDTCT-LMS-2025-SECURE-KEY-32BYT'; // 32 ký tự
@@ -21,19 +18,43 @@ async function decryptUrl(enc) {
   } catch { return enc; }
 }
 
-// Auth guard
-if (sessionStorage.getItem('dh_role') !== 'student') location.href = 'login.html';
+// Auth guard — sync localStorage → sessionStorage nếu tab mới
+(function(){
+  if(sessionStorage.getItem('dh_role') !== 'student'){
+    const lsRole = localStorage.getItem('dh_role');
+    const lsUser = localStorage.getItem('dh_user');
+    const lsName = localStorage.getItem('dh_name');
+    if(lsRole === 'student' && lsUser){
+      // Restore vào sessionStorage để trang hoạt động
+      sessionStorage.setItem('dh_role', lsRole);
+      sessionStorage.setItem('dh_user', lsUser);
+      sessionStorage.setItem('dh_name', lsName||lsUser);
+      // token không có → sẽ được verify async bên dưới, nếu fail mới redirect
+    } else {
+      location.href = 'login.html';
+    }
+  }
+})();
 
 // ── Xác thực session token với DB ngay khi load ──
 (async () => {
   const username = sessionStorage.getItem('dh_user');
   const token    = sessionStorage.getItem('dh_token');
-  if (!username || !token) { sessionStorage.clear(); location.href = 'login.html'; return; }
+  if (!username) { sessionStorage.clear(); location.href = 'login.html'; return; }
+  // Nếu không có token (tab mới từ localStorage) → verify active status từ DB
   try {
     const { data: s } = await db.from('students').select('session_token,active').eq('username', username).single();
-    if (!s || s.session_token !== token || s.active === false) {
-      sessionStorage.clear();
-      location.href = 'login.html';
+    if (!s || s.active === false) {
+      sessionStorage.clear(); localStorage.removeItem('dh_user'); localStorage.removeItem('dh_role');
+      location.href = 'login.html'; return;
+    }
+    // Có token thì verify khớp
+    if (token && s.session_token !== token) {
+      sessionStorage.clear(); location.href = 'login.html'; return;
+    }
+    // Không có token thì lưu lại token từ DB vào session để các lần sau dùng
+    if (!token && s.session_token) {
+      sessionStorage.setItem('dh_token', s.session_token);
     }
   } catch(e) { /* network error — cho qua */ }
 })();
@@ -64,6 +85,10 @@ if (sessionStorage.getItem('dh_role') !== 'student') location.href = 'login.html
 const currentUser = sessionStorage.getItem('dh_user');
 const currentName = sessionStorage.getItem('dh_name') || currentUser;
 
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 document.getElementById('studentName').textContent  = currentName;
 document.getElementById('welcomeTitle').textContent = `Xin chào, ${currentName}! 👋`;
 document.getElementById('profileName').textContent  = currentName;
@@ -78,19 +103,26 @@ function parseClassList(raw) {
     .filter(Boolean);
 }
 
+function normalizeClassName(c) {
+  return String(c || '').trim().toLowerCase();
+}
+
+/** Chỉ hiện khi đã gán lớp VÀ lớp khớp học sinh */
+function classesIntersect(rawClassName, studentClasses) {
+  const lessonClasses = parseClassList(rawClassName).map(normalizeClassName);
+  if (!lessonClasses.length) return false; // chưa gán lớp → không hiện
+  const mine = (studentClasses || []).map(normalizeClassName);
+  if (!mine.length) return false;
+  return mine.some(cls => lessonClasses.includes(cls));
+}
+
 function lessonMatchesStudentClasses(lesson, classes) {
   // Ưu tiên 1: nếu có allowed_usernames → chỉ học sinh trong danh sách mới thấy
   if (lesson?.allowed_usernames) {
     const allowed = lesson.allowed_usernames.split(',').map(u => u.trim()).filter(Boolean);
     return allowed.includes(currentUser);
   }
-  // Mặc định: kiểm tra theo lớp
-  const lessonClasses = (lesson?.class_name || '')
-    .split(',')
-    .map(c => c.trim())
-    .filter(Boolean);
-  if (!lessonClasses.length) return false; // null/empty = không gán lớp → không hiện cho ai
-  return classes.some(cls => lessonClasses.includes(cls));
+  return classesIntersect(lesson?.class_name, classes);
 }
 
 // Kiểm tra nhóm bài học có visible với học sinh hiện tại không
@@ -99,9 +131,7 @@ function groupMatchesStudent(g) {
     const allowed = g.allowed_usernames.split(',').map(u => u.trim()).filter(Boolean);
     return allowed.includes(currentUser);
   }
-  if (!g?.class_name) return false;
-  const gc = g.class_name.split(',').map(c => c.trim()).filter(Boolean);
-  return myClasses.some(mc => gc.includes(mc));
+  return classesIntersect(g?.class_name, myClasses);
 }
 
 
@@ -113,16 +143,17 @@ function debounce(fn, ms) {
 async function loadMe() {
   const { data } = await db.from('students').select('id, class_name, student_code, expiry_date, created_at, username, active').eq('username', currentUser).single();
   myClass = data?.class_name || '';
-  // Load tất cả lớp từ student_classes
+  // Load tất cả lớp: gộp students.class_name + student_classes (không bỏ sót)
   if (data?.id) {
     const { data: scData } = await db.from('student_classes').select('class_name').eq('student_id', data.id);
-    myClasses = (scData||[]).length > 0
-      ? (scData||[]).flatMap(sc => parseClassList(sc.class_name))
-      : parseClassList(myClass);
+    myClasses = [
+      ...parseClassList(myClass),
+      ...(scData || []).flatMap(sc => parseClassList(sc.class_name))
+    ];
   } else {
     myClasses = parseClassList(myClass);
   }
-  myClasses = [...new Set(myClasses)];
+  myClasses = [...new Set(myClasses.filter(Boolean))];
   myClass = myClasses[0] || ''; // giữ tương thích chỗ cũ dùng myClass
   sessionStorage.setItem('dh_code', data?.student_code || '');
 
@@ -238,6 +269,9 @@ document.getElementById('logoutBtn').addEventListener('click', async e => {
   e.preventDefault();
   await setOffline();
   sessionStorage.clear();
+  localStorage.removeItem('dh_user');
+  localStorage.removeItem('dh_role');
+  localStorage.removeItem('dh_name');
   location.href = 'login.html';
 });
 
@@ -299,14 +333,15 @@ function showPage(pg) {
   sessionStorage.removeItem('st_lesson_id'); // reset bài khi chuyển trang
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.slink').forEach(l => l.classList.remove('active'));
-  const map = { home:'Home', lessons:'Lessons', profile:'Profile', guide:'Guide', notifications:'Notifications' };
+  const map = { home:'Home', lessons:'Lessons', profile:'Profile', guide:'Guide', notifications:'Notifications', 'att-student':'AttStudent' };
   const el = document.getElementById('page' + (map[pg] || pg.charAt(0).toUpperCase()+pg.slice(1)));
   if (el) el.classList.add('active');
   document.querySelectorAll(`[data-page="${pg}"]`).forEach(l => l.classList.add('active'));
-  if (pg === 'home')          renderHome();
+  if (pg === 'home')          { renderHome(); renderHomeFeedbackBanner(); renderHomeDDBanner(); }
   if (pg === 'lessons')       renderLessonList();
   if (pg === 'notifications') renderNotifications();
   if (pg === 'schedule')      renderStudentSchedule();
+  if (pg === 'feedback')      loadStudentFeedback();
 }
 document.querySelectorAll('.slink[data-page]').forEach(l => {
   l.addEventListener('click', e => { e.preventDefault(); showPage(l.dataset.page); document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarBackdrop').classList.remove('show'); });
@@ -332,14 +367,17 @@ async function renderHome() {
   const [{ data: allRecentLessons }, { data: anns }, { data: allGroupsHome }] = await Promise.all([
     db.from('lessons').select('id,name,class_name,allowed_usernames,group_id').order('group_name',{ascending:true}).order('sort_order',{ascending:true}).order('created_at',{ascending:true}).limit(200),
     db.from('announcements').select('*').order('created_at',{ascending:false}).limit(200),
-    db.from('lesson_groups').select('id,class_name,allowed_usernames')
+    db.from('lesson_groups').select('id,class_name,allowed_usernames'),
+    loadLessonProgress()
   ]);
   const groupMapHome = Object.fromEntries((allGroupsHome||[]).map(g => [g.id, g]));
-  const list = (allRecentLessons || []).filter(l => {
+  const accessible = (allRecentLessons || []).filter(l => {
     if (lessonMatchesStudentClasses(l, myClasses)) return true;
     if (l.group_id && groupMapHome[l.group_id]) return groupMatchesStudent(groupMapHome[l.group_id]);
     return false;
-  }).slice(0, 4);
+  });
+  paintContinueBanner('homeContinueLesson', accessible, false);
+  const list = accessible.slice(0, 4);
 
   // Thông báo
   const annSection = document.getElementById('announcementSection');
@@ -400,14 +438,15 @@ async function renderHome() {
         <div style="position:absolute;top:-18px;right:-18px;width:72px;height:72px;background:rgba(255,255,255,.1);border-radius:50%"></div>
         <div style="position:absolute;bottom:-12px;left:30%;width:48px;height:48px;background:rgba(255,255,255,.08);border-radius:50%"></div>
         <div style="width:38px;height:38px;background:rgba(255,255,255,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:.6rem;position:relative">${c.icon}</div>
-        <div style="color:#fff;font-weight:800;font-size:.92rem;line-height:1.35;position:relative;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${l.name}</div>
+        <div style="color:#fff;font-weight:800;font-size:.92rem;line-height:1.35;position:relative;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escHtml(l.name)}</div>
+        ${lessonProgressBadgeHtml(l.id, true)}
       </div>
       <div style="padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between">
         <div style="display:flex;gap:.6rem">
           <span style="display:flex;align-items:center;gap:.3rem;background:${c.light};color:var(--text);font-size:.75rem;font-weight:700;padding:.25rem .6rem;border-radius:8px">🎬 ${vc}</span>
           <span style="display:flex;align-items:center;gap:.3rem;background:${c.light};color:var(--text);font-size:.75rem;font-weight:700;padding:.25rem .6rem;border-radius:8px">📄 ${dc}</span>
         </div>
-        <span style="font-size:.8rem;color:var(--primary);font-weight:700">Xem →</span>
+        <span style="font-size:.8rem;color:var(--primary);font-weight:700">${_lessonProgress[l.id]?.status === 'done' ? 'Xem lại →' : _lessonProgress[l.id] ? 'Học tiếp →' : 'Xem →'}</span>
       </div>`;
     card.addEventListener('mouseenter', () => { card.style.transform = 'translateY(-3px)'; card.style.boxShadow = '0 8px 24px rgba(0,0,0,.12)'; });
     card.addEventListener('mouseleave', () => { card.style.transform = ''; card.style.boxShadow = 'var(--shadow)'; });
@@ -458,6 +497,7 @@ async function renderLessonList(forceRefresh = false) {
     const [{ data: allVids }, { data: allDocs }] = await Promise.all([
       lessonIds.length ? db.from('lesson_videos').select('lesson_id').in('lesson_id', lessonIds) : { data: [] },
       lessonIds.length ? db.from('lesson_docs').select('lesson_id').in('lesson_id', lessonIds) : { data: [] },
+      loadLessonProgress()
     ]);
     _lessonCache = { list: merged, allVids: allVids||[], allDocs: allDocs||[], allGroups: allGroups||[] };
   }
@@ -467,6 +507,7 @@ async function renderLessonList(forceRefresh = false) {
 
 function renderLessonListFromCache() {
   const { list, allVids, allDocs, allGroups } = _lessonCache;
+  paintContinueBanner('sLessonContinue', list, true);
   const el = document.getElementById('sLessonList');
   el.innerHTML = '';
   const normalizedGroups = [];
@@ -530,8 +571,8 @@ function renderLessonListFromCache() {
     item.className = 'group-lesson-item';
     const num = document.createElement('div'); num.className = 'group-lesson-num'; num.textContent = idx + 1;
     const info = document.createElement('div'); info.className = 'group-lesson-info';
-    info.innerHTML = `<div class="group-lesson-title"><span style="margin-right:.35rem">📚</span>${l.name}</div>
-      <div class="group-lesson-stats"><span>🎬 ${vc}</span><span>📄 ${dc}</span></div>`;
+    info.innerHTML = `<div class="group-lesson-title"><span style="margin-right:.35rem">📚</span>${escHtml(l.name)}</div>
+      <div class="group-lesson-stats"><span>🎬 ${vc}</span><span>📄 ${dc}</span>${lessonProgressBadgeHtml(l.id, false)}</div>`;
     const favBtn = document.createElement('button');
     favBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:1.1rem;padding:.2rem .3rem;flex-shrink:0;line-height:1;transition:transform .15s';
     favBtn.textContent = favSet.has(l.id) ? '❤️' : '🤍';
@@ -558,10 +599,11 @@ function renderLessonListFromCache() {
 
   function buildGroupCard(g, depth, colorIdx) {
     const c = colors[colorIdx % colors.length];
-    // Nhóm con: filter theo lớp học viên hoặc gán riêng học sinh này
+    // Nhóm con: hiện nếu khớp lớp/HS, HOẶC có bài đã lọc thuộc nhóm đó
     const children = (normalizedGroups||[]).filter(x => {
       if (x.parent_id !== g.id) return false;
-      return groupMatchesStudent(x);
+      if (groupMatchesStudent(x)) return true;
+      return getLessonsForGroup(x.id, x.name).length > 0;
     });
     const directLessons = getLessonsForGroup(g.id, g.name);
     // Bỏ qua nhóm không có nội dung gì
@@ -635,10 +677,26 @@ function renderLessonListFromCache() {
   // Bài học không thuộc nhóm nào (và chưa được render trong nhóm)
   const ungrouped = filtered.filter(l => !assignedLessonIds.has(l.id));
 
-  // Render nhóm gốc — hiển thị nhóm theo lớp học viên HOẶC được gán riêng
+  // Render nhóm gốc — hiện nếu nhóm/nhóm con khớp lớp, hoặc có bài đã lọc trong cây nhóm
+  function collectTreeIds(rootId) {
+    const ids = new Set([rootId]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      (normalizedGroups || []).forEach(x => {
+        if (x.parent_id != null && ids.has(x.parent_id) && !ids.has(x.id)) {
+          ids.add(x.id);
+          grew = true;
+        }
+      });
+    }
+    return ids;
+  }
   const roots = (normalizedGroups||[]).filter(g => {
     if (g.parent_id) return false; // chỉ lấy root
-    return groupMatchesStudent(g);
+    const treeIds = collectTreeIds(g.id);
+    if ((normalizedGroups || []).some(x => treeIds.has(x.id) && groupMatchesStudent(x))) return true;
+    return filtered.some(l => l.group_id != null && treeIds.has(l.group_id));
   });
   const seenRootIds = new Set();
   roots.forEach((g, gi) => {
@@ -725,6 +783,98 @@ function getDownloadUrl(url) {
   return null;
 }
 
+// Che nút "mở tab mới" (pop-out) của Google Drive — nằm trong iframe nên chỉ che được từ ngoài
+function coverDrivePopout(host, opts) {
+  if (!host) return null;
+  const kind = opts?.kind || 'video';
+  const allowDownload = !!opts?.allowDownload;
+  const isDoc = kind === 'doc';
+  host.style.position = host.style.position || 'relative';
+  host.style.overflow = 'hidden';
+  const el = document.createElement('div');
+  el.className = 'drive-popout-cover';
+  el.setAttribute('aria-hidden', 'true');
+  const w = isDoc ? (allowDownload ? 80 : 210) : 72;
+  const h = isDoc ? 58 : 72;
+  const bg = isDoc ? '#f8f9fa' : '#000';
+  el.style.cssText = `position:absolute;top:0;right:0;width:${w}px;height:${h}px;z-index:8;background:${bg};cursor:default`;
+  const stop = e => { e.preventDefault(); e.stopPropagation(); };
+  el.addEventListener('click', stop);
+  el.addEventListener('mousedown', stop);
+  el.addEventListener('pointerdown', stop);
+  host.appendChild(el);
+  return el;
+}
+
+// Điện thoại ngang: Drive dùng UI cảm ứng quá to → giả lập màn desktop rồi scale xuống
+function layoutDriveIframe(iframe, wrap, coverEl) {
+  if (!iframe || !wrap) return () => {};
+  const VW = 1280, VH = 720;
+  const apply = () => {
+    const cw = wrap.clientWidth || 0;
+    const ch = wrap.clientHeight || 0;
+    if (!cw || !ch) return;
+    const landscapeMobile = cw > ch && ch < 520;
+    if (!landscapeMobile) {
+      iframe.style.position = 'absolute';
+      iframe.style.left = '0';
+      iframe.style.top = '0';
+      iframe.style.width = '100%';
+      iframe.style.height = '100%';
+      iframe.style.transform = 'none';
+      iframe.style.maxWidth = '';
+      iframe.style.maxHeight = '';
+      if (coverEl && coverEl.classList.contains('drive-popout-cover')) {
+        coverEl.style.top = '0';
+        coverEl.style.right = '0';
+        coverEl.style.width = '56px';
+        coverEl.style.height = '56px';
+      }
+      return;
+    }
+    const scale = Math.min(cw / VW, ch / VH);
+    iframe.style.position = 'absolute';
+    iframe.style.width = VW + 'px';
+    iframe.style.height = VH + 'px';
+    iframe.style.maxWidth = 'none';
+    iframe.style.maxHeight = 'none';
+    iframe.style.left = '50%';
+    iframe.style.top = '50%';
+    iframe.style.transformOrigin = 'center center';
+    iframe.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    if (coverEl) {
+      const dispW = VW * scale;
+      const right = Math.max(0, (cw - dispW) / 2);
+      const top = Math.max(0, (ch - VH * scale) / 2);
+      const size = Math.max(40, Math.round(56 * scale));
+      coverEl.style.top = top + 'px';
+      coverEl.style.right = right + 'px';
+      coverEl.style.width = size + 'px';
+      coverEl.style.height = size + 'px';
+    }
+  };
+  apply();
+  requestAnimationFrame(apply);
+  const ro = (typeof ResizeObserver !== 'undefined') ? new ResizeObserver(apply) : null;
+  if (ro) ro.observe(wrap);
+  const onWin = () => apply();
+  window.addEventListener('resize', onWin);
+  window.addEventListener('orientationchange', onWin);
+  return () => {
+    if (ro) ro.disconnect();
+    window.removeEventListener('resize', onWin);
+    window.removeEventListener('orientationchange', onWin);
+  };
+}
+
+// Video mặc định không tải; tài liệu mặc định được tải (khi cột SQL chưa có / null)
+function mediaAllowDownload(item, kind) {
+  if (!item) return false;
+  if (item.allow_download === true) return true;
+  if (item.allow_download === false) return false;
+  return kind === 'doc';
+}
+
 // ---- Chi tiết bài học ----
 // ---- Ghi log truy cap ----
 function logAccess(lessonId, lessonName, contentId, contentTitle, contentType) {
@@ -739,6 +889,125 @@ function logAccess(lessonId, lessonName, contentId, contentTitle, contentType) {
     content_type: contentType
   }).then(() => {}).catch(() => {});
 }
+
+// ---- Tiến độ bài học (đã học / học tiếp) ----
+let _lessonProgress = {};
+
+async function loadLessonProgress() {
+  try {
+    const { data, error } = await db.from('lesson_progress')
+      .select('lesson_id,status,last_opened_at,completed_at')
+      .eq('username', currentUser);
+    if (error || !data) return;
+    const next = {};
+    data.forEach(p => { next[p.lesson_id] = p; });
+    _lessonProgress = next;
+  } catch { /* bảng chưa tạo */ }
+}
+
+function pickContinueLesson(accessibleIds) {
+  const idSet = accessibleIds instanceof Set ? accessibleIds : new Set(accessibleIds || []);
+  let best = null;
+  Object.entries(_lessonProgress).forEach(([lid, p]) => {
+    const id = Number(lid);
+    if (!idSet.has(id)) return;
+    if ((p.status || 'in_progress') === 'done') return;
+    if (!best || new Date(p.last_opened_at || 0) > new Date(best.last_opened_at || 0)) {
+      best = { lesson_id: id, ...p };
+    }
+  });
+  return best;
+}
+
+function lessonProgressBadgeHtml(lessonId, onDark) {
+  const p = _lessonProgress[lessonId];
+  if (!p) return '';
+  if (p.status === 'done') {
+    return onDark
+      ? `<span style="display:inline-block;margin-top:.45rem;background:rgba(16,185,129,.25);color:#bbf7d0;font-size:.68rem;font-weight:700;padding:.15rem .5rem;border-radius:999px;position:relative">✓ Đã học</span>`
+      : `<span style="background:#d1fae5;color:#065f46;font-size:.65rem;font-weight:700;padding:.12rem .4rem;border-radius:6px">Đã học</span>`;
+  }
+  return onDark
+    ? `<span style="display:inline-block;margin-top:.45rem;background:rgba(255,255,255,.18);color:#fff;font-size:.68rem;font-weight:700;padding:.15rem .5rem;border-radius:999px;position:relative">▶ Đang học</span>`
+    : `<span style="background:#eef2ff;color:#4338ca;font-size:.65rem;font-weight:700;padding:.12rem .4rem;border-radius:6px">Đang học</span>`;
+}
+
+function paintContinueBanner(elId, lessons, alreadyOnLessons) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const pick = pickContinueLesson((lessons || []).map(l => l.id));
+  const lesson = pick && (lessons || []).find(l => l.id === pick.lesson_id);
+  if (!lesson) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = '';
+  el.innerHTML = `
+    <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:14px;padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;cursor:pointer;box-shadow:0 8px 24px rgba(79,70,229,.22)">
+      <div style="min-width:0">
+        <div style="font-size:.72rem;font-weight:700;letter-spacing:.06em;opacity:.85;margin-bottom:.25rem">▶ TIẾP TỤC HỌC</div>
+        <div style="font-weight:800;font-size:1.02rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(lesson.name)}</div>
+        <div style="font-size:.75rem;opacity:.75;margin-top:.2rem">Mở lại bài bạn đang học dở</div>
+      </div>
+      <span style="flex-shrink:0;background:#fff;color:#4f46e5;border-radius:10px;padding:.55rem 1rem;font-weight:800;font-size:.85rem">Học tiếp →</span>
+    </div>`;
+  el.onclick = () => {
+    if (!alreadyOnLessons) showPage('lessons');
+    openLessonDetail(lesson.id);
+  };
+}
+
+async function markLessonOpened(lessonId) {
+  const now = new Date().toISOString();
+  const prev = _lessonProgress[lessonId];
+  const row = {
+    username: currentUser,
+    lesson_id: lessonId,
+    status: prev?.status === 'done' ? 'done' : 'in_progress',
+    last_opened_at: now,
+    completed_at: prev?.status === 'done' ? (prev.completed_at || null) : null
+  };
+  _lessonProgress[lessonId] = row;
+  try {
+    await db.from('lesson_progress').upsert(row, { onConflict: 'username,lesson_id' });
+  } catch { /* bảng chưa tạo */ }
+}
+
+async function setLessonProgressStatus(lessonId, done) {
+  const now = new Date().toISOString();
+  const prev = _lessonProgress[lessonId];
+  const row = {
+    username: currentUser,
+    lesson_id: lessonId,
+    status: done ? 'done' : 'in_progress',
+    last_opened_at: done ? (prev?.last_opened_at || now) : now,
+    completed_at: done ? now : null
+  };
+  _lessonProgress[lessonId] = row;
+  try {
+    await db.from('lesson_progress').upsert(row, { onConflict: 'username,lesson_id' });
+  } catch { /* bảng chưa tạo */ }
+}
+
+function paintLessonDoneBtn(lessonId) {
+  const row = document.getElementById('sLessonProgressRow');
+  if (!row) return;
+  const done = _lessonProgress[lessonId]?.status === 'done';
+  if (done) {
+    row.innerHTML = `
+      <span style="background:rgba(16,185,129,.22);color:#bbf7d0;font-size:.78rem;font-weight:700;padding:.4rem .75rem;border-radius:8px;border:1px solid rgba(167,243,208,.35)">✓ Đã học xong</span>
+      <button type="button" id="sUnmarkDoneBtn" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff;padding:.4rem .75rem;border-radius:8px;font-size:.78rem;cursor:pointer;font-weight:600">Đánh dấu chưa xong</button>`;
+    document.getElementById('sUnmarkDoneBtn')?.addEventListener('click', async () => {
+      await setLessonProgressStatus(lessonId, false);
+      paintLessonDoneBtn(lessonId);
+    });
+  } else {
+    row.innerHTML = `
+      <button type="button" id="sMarkDoneBtn" style="background:#fff;color:#312e81;border:none;padding:.45rem .9rem;border-radius:8px;font-size:.8rem;cursor:pointer;font-weight:800">Đánh dấu đã học xong</button>`;
+    document.getElementById('sMarkDoneBtn')?.addEventListener('click', async () => {
+      await setLessonProgressStatus(lessonId, true);
+      paintLessonDoneBtn(lessonId);
+    });
+  }
+}
+
 async function openLessonDetail(id) {
   sessionStorage.setItem('st_lesson_id', id);
   // Lưu scroll position và nhóm đang mở
@@ -751,6 +1020,8 @@ async function openLessonDetail(id) {
   document.getElementById('sLessonDetailView').style.display = '';
   document.getElementById('sLessonDetailTitle').textContent = '...';
   document.getElementById('sLessonDetailDesc').textContent  = '';
+  const progRow = document.getElementById('sLessonProgressRow');
+  if (progRow) progRow.innerHTML = '';
 
   // 3 query song song
   const [{ data:l }, { data:vids }, { data:docs }] = await Promise.all([
@@ -762,6 +1033,8 @@ async function openLessonDetail(id) {
   if (!l) return;
   document.getElementById('sLessonDetailTitle').textContent = l.name;
   document.getElementById('sLessonDetailDesc').textContent  = l.description||'';
+  paintLessonDoneBtn(id);
+  markLessonOpened(id).then(() => paintLessonDoneBtn(id));
 
   // Render video — decrypt song song
   const vGrid = document.getElementById('sLessonVideoGrid');
@@ -784,7 +1057,7 @@ async function openLessonDetail(id) {
         </div>
         <div class="video-info">
           <div class="video-title">${v.title}</div>
-          <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">Bài ${idx+1}</div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">Bài ${idx+1}${mediaAllowDownload(v, 'video') ? ' · Có thể tải' : ''}</div>
         </div>`;
     } else {
       card.innerHTML = `
@@ -797,13 +1070,13 @@ async function openLessonDetail(id) {
         </div>
         <div class="video-info">
           <div class="video-title">${v.title}</div>
-          <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">Bài ${idx+1}</div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">Bài ${idx+1}${mediaAllowDownload(v, 'video') ? ' · Có thể tải' : ''}</div>
         </div>`;
     }
     card.querySelector('.video-thumb').addEventListener('click', () => {
       logAccess(id, l.name, v.id, v.title, 'video');
       _currentLessonGroup = l.group_name || '';
-      openViewer(v.title, url, v.file_name, isLink ? 'link' : 'video');
+      openViewer(v.title, url, v.file_name, isLink ? 'link' : 'video', mediaAllowDownload(v, 'video'));
     });
     vGrid.appendChild(card);
   });
@@ -831,15 +1104,15 @@ async function openLessonDetail(id) {
       <div style="width:42px;height:42px;background:${bg};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${icon}</div>
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.title}</div>
-        <div style="font-size:.75rem;color:${color};font-weight:600;margin-top:.15rem">${label}</div>
+        <div style="font-size:.75rem;color:${color};font-weight:600;margin-top:.15rem">${label}${mediaAllowDownload(d, 'doc') ? ' · Có thể tải' : ''}</div>
       </div>
-      <div style="background:${bg};color:${color};padding:.35rem .75rem;border-radius:8px;font-size:.78rem;font-weight:700;flex-shrink:0">Xem →</div>
+      <div style="background:${bg};color:${color};padding:.35rem .75rem;border-radius:8px;font-size:.78rem;font-weight:700;flex-shrink:0">${mediaAllowDownload(d, 'doc') ? 'Xem / Tải →' : 'Xem →'}</div>
     `;
     row.addEventListener('mouseenter', () => { row.style.borderColor = color; row.style.transform = 'translateX(3px)'; });
     row.addEventListener('mouseleave', () => { row.style.borderColor = 'var(--border)'; row.style.transform = ''; });
     row.addEventListener('click', () => {
       logAccess(id, l.name, d.id, d.title, 'doc');
-      openViewer(d.title, url, d.file_name, isHandwritten?'handwritten-link':isLink?'doc-link':d.file_type);
+      openViewer(d.title, url, d.file_name, isHandwritten?'handwritten-link':isLink?'doc-link':d.file_type, mediaAllowDownload(d, 'doc'));
     });
     dList.appendChild(row);
   });
@@ -878,11 +1151,12 @@ function _hideTabWarning() {
   if (overlay) overlay.style.display = 'none';
 }
 
-function openViewer(title, url, fileName, fileType) {
+function openViewer(title, url, fileName, fileType, allowDownload) {
   const isVideo = fileType==='video'||(fileType||'').startsWith('video/');
   const isLink = fileType==='link';
   const isDocLink = fileType==='doc-link';
   const isHandwrittenLink = fileType==='handwritten-link';
+  allowDownload = !!allowDownload;
 
   _viewerActive = true;
   _viewerIsVideo = isVideo || isLink;
@@ -927,8 +1201,14 @@ function openViewer(title, url, fileName, fileType) {
         _currentLessonGroup.toLowerCase().includes(g.toLowerCase())
       );
       const dlUrl = isDrive ? getDownloadUrl(url) : null;
+      if (allowDownload && dlUrl) {
+        dl.style.display = '';
+        dl.href = dlUrl;
+        dl.removeAttribute('download');
+        dl.target = '_blank';
+      }
 
-      if (_skipOverlay && dlUrl) {
+      if (allowDownload && _skipOverlay && dlUrl) {
         // Banner tải xuống dự phòng cho video Drive bị lỗi quota
         const dlBanner = document.createElement('div');
         dlBanner.style.cssText = 'background:#eff6ff;border-left:3px solid #3b82f6;padding:.6rem .85rem;border-radius:8px;margin-bottom:.5rem;font-size:.82rem;color:#1e40af;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap';
@@ -939,22 +1219,27 @@ function openViewer(title, url, fileName, fileType) {
             ⬇ Tải xuống
           </a>`;
         body.insertBefore(dlBanner, wrap);
-      } else {
-        // Tip chất lượng (chỉ hiện khi không phải Drive lỗi quota)
+      } else if (window.innerWidth > 768) {
+        // Tip chất lượng — ẩn trên điện thoại để video to hơn
         body.insertBefore(Object.assign(document.createElement('div'), {
           style: 'background:#fffbeb;border-left:3px solid #f59e0b;padding:.5rem .85rem;border-radius:8px;margin-bottom:.5rem;font-size:.8rem;color:#92400e;flex-shrink:0',
           innerHTML: '💡 Video bị mờ? Nhấn ⚙️ → <b>Chất lượng</b> → tăng lên <b>720p hoặc 1080p</b>'
         }), wrap);
       }
       const iframeWrap = document.createElement('div');
-      iframeWrap.style.cssText = 'position:relative;flex:1;min-height:0;overflow:hidden';
+      iframeWrap.className = 'viewer-fs-target';
+      iframeWrap.style.cssText = 'position:relative;flex:1;min-height:0;overflow:hidden;background:#000';
       const iframe = document.createElement('iframe');
       iframe.id = '_ytIframe_' + Date.now();
       iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none';
       iframe.allowFullscreen = true;
-      iframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
+      iframe.setAttribute('allowfullscreen', '');
+      iframe.setAttribute('webkitallowfullscreen', 'true');
+      iframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture; accelerometer; gyroscope');
       iframe.onload = hideLoading;
       iframeWrap.appendChild(iframe);
+      const driveCover = isDrive ? coverDrivePopout(iframeWrap, { kind: 'video', allowDownload }) : null;
+      const unlayoutDrive = isDrive ? layoutDriveIframe(iframe, iframeWrap, driveCover) : () => {};
 
 
 
@@ -966,7 +1251,7 @@ function openViewer(title, url, fileName, fileType) {
         if (window._ytOpenBlocked) {
           const targetUrl = args[0] || '';
           // Cho phép link tải xuống Drive
-          if (typeof targetUrl === 'string' && (
+          if (allowDownload && typeof targetUrl === 'string' && (
             targetUrl.includes('drive.google.com/uc') ||
             targetUrl.includes('drive.google.com/file') ||
             targetUrl.includes('export=download')
@@ -982,10 +1267,10 @@ function openViewer(title, url, fileName, fileType) {
       const _onKeyF = (e) => {
         if ((e.key === 'f' || e.key === 'F') && document.getElementById('viewerModal')?.classList.contains('open')) {
           e.preventDefault(); e.stopImmediatePropagation();
-          if (iframe.requestFullscreen)            iframe.requestFullscreen();
-          else if (iframe.webkitRequestFullscreen) iframe.webkitRequestFullscreen();
-          else if (iframe.mozRequestFullScreen)    iframe.mozRequestFullScreen();
-          else if (iframe.msRequestFullscreen)     iframe.msRequestFullscreen();
+          if (iframeWrap.requestFullscreen)            iframeWrap.requestFullscreen();
+          else if (iframeWrap.webkitRequestFullscreen) iframeWrap.webkitRequestFullscreen();
+          else if (iframeWrap.mozRequestFullScreen)    iframeWrap.mozRequestFullScreen();
+          else if (iframeWrap.msRequestFullscreen)     iframeWrap.msRequestFullscreen();
         }
       };
       document.addEventListener('keydown', _onKeyF, true);
@@ -993,9 +1278,9 @@ function openViewer(title, url, fileName, fileType) {
       // Dọn tất cả khi đóng viewer
       iframe._cleanupF = () => {
         document.removeEventListener('keydown', _onKeyF, true);
-        // Restore window.open
         window._ytOpenBlocked = false;
         window.open = _origOpen;
+        try { unlayoutDrive(); } catch(e) {}
         if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       };
 
@@ -1011,7 +1296,7 @@ function openViewer(title, url, fileName, fileType) {
       // Khi Drive bị lỗi quota "đạt giới hạn người xem", iframe vẫn load nhưng hiện thông báo lỗi
       // → Hiện nút tải xuống dự phòng ngay từ đầu để học viên có thể tải về xem offline
       const dlUrl = getDownloadUrl(url);
-      if (dlUrl) {
+      if (allowDownload && dlUrl) {
         // Banner thông báo tải xuống dự phòng
         const dlBanner = document.createElement('div');
         dlBanner.style.cssText = 'background:#eff6ff;border-left:3px solid #3b82f6;padding:.5rem .85rem;border-radius:8px;margin-bottom:.5rem;font-size:.8rem;color:#1e40af;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:.75rem';
@@ -1023,75 +1308,115 @@ function openViewer(title, url, fileName, fileType) {
           </a>`;
         body.insertBefore(dlBanner, wrap);
       }
+      const iframeWrap = document.createElement('div');
+      iframeWrap.className = 'viewer-fs-target';
+      iframeWrap.style.cssText = 'position:relative;flex:1;min-height:0;overflow:hidden;background:#000';
       const iframe = document.createElement('iframe');
-      iframe.style.cssText = 'flex:1;width:100%;height:100%;border:none;border-radius:8px';
+      iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:8px';
+      iframe.allowFullscreen = true;
+      iframe.setAttribute('allowfullscreen', '');
+      iframe.setAttribute('webkitallowfullscreen', 'true');
+      iframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
       iframe.onload = hideLoading;
-      wrap.appendChild(iframe);
+      iframeWrap.appendChild(iframe);
+      const isDrive2 = url && url.includes('drive.google.com');
+      const driveCover2 = isDrive2 ? coverDrivePopout(iframeWrap, { kind: 'video', allowDownload }) : null;
+      const unlayout2 = isDrive2 ? layoutDriveIframe(iframe, iframeWrap, driveCover2) : () => {};
+      iframe._cleanupF = () => { try { unlayout2(); } catch(e) {} };
+      wrap.appendChild(iframeWrap);
       setTimeout(() => { iframe.src = url; }, 0);
     }
   } else if (isDocLink || isHandwrittenLink) {
-    const dlUrl = getDownloadUrl(url);
-    if (dlUrl) { dl.style.display=''; dl.href=dlUrl; dl.removeAttribute('download'); dl.target='_blank'; }
+    const dlUrl = getDownloadUrl(url) || url;
+    if (allowDownload && dlUrl) { dl.style.display=''; dl.href=dlUrl; dl.removeAttribute('download'); dl.target='_blank'; }
     const embed = getEmbedUrl(url);
+    const iframeWrap = document.createElement('div');
+    iframeWrap.style.cssText = 'position:relative;flex:1;min-height:0;overflow:hidden';
     const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'flex:1;width:100%;height:100%;border:none;border-radius:8px';
+    iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:8px';
     iframe.allowFullscreen = true;
     iframe.onload = hideLoading;
-    wrap.appendChild(iframe);
+    iframeWrap.appendChild(iframe);
+    if ((url || embed || '').includes('drive.google.com')) {
+      coverDrivePopout(iframeWrap, { kind: 'doc', allowDownload });
+    }
+    wrap.appendChild(iframeWrap);
     setTimeout(() => { iframe.src = embed || url; }, 0);
   } else if (isVideo) {
     const video = document.createElement('video');
     video.controls = true;
     video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    if (!allowDownload) {
+      video.setAttribute('controlsList', 'nodownload');
+      video.disablePictureInPicture = true;
+      video.addEventListener('contextmenu', e => e.preventDefault());
+    } else {
+      dl.style.display = '';
+      dl.href = url;
+      if (fileName) dl.download = fileName; else dl.removeAttribute('download');
+      dl.target = '_blank';
+    }
+    video.style.cssText = 'flex:1;width:100%;background:#000;position:relative;z-index:1';
+    video.oncanplay = hideLoading;
+    video.addEventListener('play', () => { _activeVideoEl = video; });
+    video.addEventListener('pause', () => { if (_activeVideoEl === video) _activeVideoEl = null; });
+    wrap.className = (wrap.className + ' viewer-fs-target').trim();
     video.style.cssText = 'flex:1;width:100%;background:#000;position:relative;z-index:1';
     video.oncanplay = hideLoading;
     video.addEventListener('play', () => { _activeVideoEl = video; });
     video.addEventListener('pause', () => { if (_activeVideoEl === video) _activeVideoEl = null; });
     wrap.appendChild(video);
     setTimeout(() => { video.src = url; }, 0);
-    if (window.innerWidth < 768 && window.innerHeight > window.innerWidth) {
-      const tip = document.createElement('div');
-      tip.style.cssText = 'background:#fff3cd;color:#856404;padding:.6rem 1rem;border-radius:8px;margin-bottom:.5rem;font-size:.85rem;text-align:center;flex-shrink:0';
-      tip.textContent = '📱 Vui lòng chuyển điện thoại sang ngang để có trải nghiệm học tốt nhất';
-      body.insertBefore(tip, wrap);
-      const onOrient = () => { if (window.innerWidth > window.innerHeight) { tip.remove(); window.removeEventListener('resize', onOrient); } };
-      window.addEventListener('resize', onOrient);
-    }
   } else if (fileType==='application/pdf') {
-    dl.style.display = '';
-    dl.href = url;
-    if (fileName) dl.download = fileName; else dl.removeAttribute('download');
-    dl.target = '_blank';
+    if (allowDownload) {
+      dl.style.display = '';
+      dl.href = url;
+      if (fileName) dl.download = fileName; else dl.removeAttribute('download');
+      dl.target = '_blank';
+    }
     const iframe = document.createElement('iframe');
     iframe.className = 'viewer-iframe';
     iframe.onload = hideLoading;
     wrap.appendChild(iframe);
     setTimeout(() => { iframe.src = url; }, 0);
   } else if ((fileType||'').startsWith('image/')) {
-    dl.style.display = '';
-    dl.href = url;
-    if (fileName) dl.download = fileName; else dl.removeAttribute('download');
-    dl.target = '_blank';
+    if (allowDownload) {
+      dl.style.display = '';
+      dl.href = url;
+      if (fileName) dl.download = fileName; else dl.removeAttribute('download');
+      dl.target = '_blank';
+    }
     const img = document.createElement('img');
     img.className = 'viewer-img';
     img.alt = title;
     img.onload = hideLoading;
+    if (!allowDownload) img.addEventListener('contextmenu', e => e.preventDefault());
     wrap.appendChild(img);
     setTimeout(() => { img.src = url; }, 0);
   } else {
-    dl.style.display = '';
-    dl.href = url;
-    if (fileName) dl.download = fileName; else dl.removeAttribute('download');
-    dl.target = '_blank';
-    body.innerHTML = '<p class="muted-center">⚠️ Không xem trực tiếp được. Vui lòng tải xuống.</p>';
+    if (allowDownload) {
+      dl.style.display = '';
+      dl.href = url;
+      if (fileName) dl.download = fileName; else dl.removeAttribute('download');
+      dl.target = '_blank';
+      body.innerHTML = '<p class="muted-center">⚠️ Không xem trực tiếp được. Vui lòng tải xuống.</p>';
+    } else {
+      body.innerHTML = '<p class="muted-center">⚠️ Không xem trực tiếp được. File này không được phép tải xuống.</p>';
+    }
   }
   document.getElementById('viewerModal').classList.add('open');
+  document.getElementById('viewerModal').classList.remove('viewer-true-fs');
   // Tạm tắt DevTools detection khi modal mở
   if (typeof _dtPaused !== 'undefined') _dtPaused = true;
-  // Hiện nút xoay trên mobile
+  const fsBtn = document.getElementById('viewerFsBtn');
+  if (fsBtn) {
+    fsBtn.style.display = (isVideo || isLink) && window.innerWidth > 768 ? '' : 'none';
+    fsBtn.textContent = '⛶ Toàn màn hình';
+  }
   const rotateBtn = document.getElementById('viewerRotateBtn');
   if (rotateBtn) {
-    rotateBtn.style.display = window.innerWidth <= 768 ? '' : 'none';
+    rotateBtn.style.display = 'none';
     rotateBtn.textContent = '🔄 Xoay ngang';
     _viewerRotated = false;
   }
@@ -1103,15 +1428,18 @@ function closeViewer() {
   _viewerIsVideo = false;
   _activeVideoEl = null;
   _hideTabWarning();
-  // Dọn listener phím F của iframe nếu có
   const body = document.getElementById('viewerBody');
   body.querySelectorAll('iframe').forEach(fr => { if (fr._cleanupF) fr._cleanupF(); });
-  document.getElementById('viewerModal').classList.remove('open'); 
+  const modal = document.getElementById('viewerModal');
+  modal.classList.remove('open');
+  modal.classList.remove('viewer-true-fs');
   body.innerHTML='';
+  const fsBtn = document.getElementById('viewerFsBtn');
+  if (fsBtn) fsBtn.style.display = 'none';
   document.getElementById('viewerRotateBtn').style.display = 'none';
   _viewerRotated = false;
   if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
-  // Resume DevTools detection
+  try { screen.orientation?.unlock?.(); } catch(e) {}
   if (typeof _dtPaused !== 'undefined') {
     _dtPaused = false;
     if (typeof _dtOpen !== 'undefined') _dtOpen = false;
@@ -1119,6 +1447,55 @@ function closeViewer() {
     document.body.style.pointerEvents = '';
   }
 }
+
+async function toggleViewerFullscreen() {
+  const modal = document.getElementById('viewerModal');
+  const video = document.querySelector('#viewerBody video');
+  const target = document.querySelector('#viewerBody .viewer-fs-target') || document.getElementById('viewerBody');
+  const fsBtn = document.getElementById('viewerFsBtn');
+  const isiOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    try { await (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch(e) {}
+    modal.classList.remove('viewer-true-fs');
+    if (fsBtn) fsBtn.textContent = '⛶ Toàn màn hình';
+    return;
+  }
+  if (modal.classList.contains('viewer-true-fs')) {
+    modal.classList.remove('viewer-true-fs');
+    if (fsBtn) fsBtn.textContent = '⛶ Toàn màn hình';
+    try { screen.orientation?.unlock?.(); } catch(e) {}
+    return;
+  }
+
+  if (video && isiOS && typeof video.webkitEnterFullscreen === 'function') {
+    try { video.webkitEnterFullscreen(); return; } catch(e) {}
+  }
+  try {
+    const req = target.requestFullscreen || target.webkitRequestFullscreen || target.webkitRequestFullScreen;
+    if (req) {
+      await req.call(target);
+      if (fsBtn) fsBtn.textContent = '⛶ Thu nhỏ';
+      try { await screen.orientation?.lock?.('landscape'); } catch(e) {}
+      return;
+    }
+  } catch(e) {}
+  modal.classList.add('viewer-true-fs');
+  if (fsBtn) fsBtn.textContent = '⛶ Thu nhỏ';
+}
+
+document.getElementById('viewerFsBtn')?.addEventListener('click', e => {
+  e.stopPropagation();
+  toggleViewerFullscreen();
+});
+document.addEventListener('fullscreenchange', () => {
+  const fsBtn = document.getElementById('viewerFsBtn');
+  if (!fsBtn) return;
+  fsBtn.textContent = document.fullscreenElement ? '⛶ Thu nhỏ' : '⛶ Toàn màn hình';
+  if (!document.fullscreenElement) {
+    document.getElementById('viewerModal')?.classList.remove('viewer-true-fs');
+  }
+});
 
 // Xoay viewer
 let _viewerRotated = false;
@@ -1145,6 +1522,8 @@ document.getElementById('viewerRotateBtn')?.addEventListener('click', () => {
 // ---- Init ----
 
 loadMe().then(async () => {
+  await loadLessonProgress();
+  if (location.hash === '#feedback') sessionStorage.setItem('st_page', 'feedback');
   const savedPage = sessionStorage.getItem('st_page') || 'home';
   const savedLesson = sessionStorage.getItem('st_lesson_id');
   if (savedPage === 'lessons' && savedLesson) {
@@ -1159,6 +1538,7 @@ loadMe().then(async () => {
     showPage(savedPage);
   }
   checkNewNotifications(true);
+  refreshFbBadge();
 });
 
 // ── Helper hiện màn hình bị đăng xuất do thiết bị mới ──
@@ -1617,11 +1997,10 @@ db.channel('student-new-lesson')
       const allowed = lesson.allowed_usernames.split(',').map(u=>u.trim()).filter(Boolean);
       if (!allowed.includes(currentUser)) return;
       showNewLessonToast(lesson.name, true); // gán riêng
-    } else if (lesson.class_name) {
-      if (!myClasses.some(mc => lesson.class_name.split(',').map(c=>c.trim()).includes(mc))) return;
+    } else if (lesson.class_name && classesIntersect(lesson.class_name, myClasses)) {
       showNewLessonToast(lesson.name, false);
     } else {
-      return; // không gán lớp và không gán riêng → bỏ qua
+      return; // chưa gán lớp hoặc không khớp lớp học sinh
     }
     _scheduleLessonReload();
   })
@@ -1972,3 +2351,286 @@ document.getElementById('sNextWeek')?.addEventListener('click', () => {
 function openScheduleViewer(s) {
   // legacy — không dùng nữa nhưng giữ để không lỗi nếu còn ref cũ
 }
+
+// ════════════════════════════════════════════════════════════════
+// GÓP Ý BUỔI HỌC
+// ════════════════════════════════════════════════════════════════
+const FB_PACE = { slow: 'Chậm', ok: 'Vừa', fast: 'Nhanh' };
+const FB_UND  = { low: 'Chưa rõ', ok: 'Tạm ổn', high: 'Nắm chắc' };
+
+let _fbFormId = null;
+let _fbPace = '';
+let _fbUnderstood = '';
+let _fbCanEdit = true;
+
+function _fbDate(d) {
+  if (!d) return '';
+  return new Date(d + 'T00:00:00').toLocaleDateString('vi-VN', { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+async function _fetchMyFeedback() {
+  const classes = myClasses.length ? myClasses : ['__none__'];
+  const { data: sessions, error } = await db
+    .from('session_feedback')
+    .select('*')
+    .in('class_name', classes)
+    .order('session_date', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  const list = sessions || [];
+  const ids = list.map(s => s.id);
+  let replies = [];
+  if (ids.length) {
+    const { data } = await db.from('session_feedback_replies')
+      .select('*').eq('username', currentUser).in('feedback_id', ids);
+    replies = data || [];
+  }
+  const replyMap = Object.fromEntries(replies.map(r => [r.feedback_id, r]));
+  return { list, replyMap };
+}
+
+async function refreshFbBadge() {
+  const dot = document.getElementById('sidebarFbDot');
+  if (!dot) return;
+  try {
+    const { list, replyMap } = await _fetchMyFeedback();
+    const pending = list.filter(s => s.is_open && !replyMap[s.id]).length;
+    dot.style.display = pending ? '' : 'none';
+  } catch { dot.style.display = 'none'; }
+}
+
+async function renderHomeFeedbackBanner() {
+  const box = document.getElementById('homeFeedbackBanner');
+  if (!box) return;
+  try {
+    const { list, replyMap } = await _fetchMyFeedback();
+    const pending = list.filter(s => s.is_open && !replyMap[s.id]);
+    if (!pending.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    const first = pending[0];
+    box.style.display = '';
+    box.innerHTML = `
+      <div onclick="showPage('feedback')" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px solid #f59e0b;border-radius:14px;padding:1rem 1.2rem;cursor:pointer">
+        <div style="font-weight:800;font-size:.9rem;color:#92400e;margin-bottom:.35rem">💡 Có ${pending.length} buổi đang chờ góp ý</div>
+        <div style="font-size:.82rem;color:#78350f;line-height:1.55">Mới nhất: <b>${escHtml(first.title)}</b> — ${escHtml(_fbDate(first.session_date))}. Bấm để gửi ý kiến cho buổi sau.</div>
+      </div>`;
+  } catch { box.style.display = 'none'; }
+}
+
+async function loadStudentFeedback() {
+  const openEl = document.getElementById('fbOpenSection');
+  const openList = document.getElementById('fbOpenList');
+  const histEl = document.getElementById('fbHistoryList');
+  if (!histEl) return;
+  histEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.85rem">⏳ Đang tải...</div>';
+  try {
+    const { list, replyMap } = await _fetchMyFeedback();
+    if (!list.length) {
+      if (openEl) openEl.style.display = 'none';
+      histEl.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--muted)">📭 Chưa có buổi góp ý nào.<br/><small>Khi giáo viên mở form sau buổi học, buổi sẽ hiện ở đây.</small></div>';
+      refreshFbBadge();
+      return;
+    }
+    const pending = list.filter(s => s.is_open && !replyMap[s.id]);
+    if (openEl && openList) {
+      if (pending.length) {
+        openEl.style.display = '';
+        openList.innerHTML = pending.map(s => _fbCard(s, replyMap[s.id], true)).join('');
+      } else openEl.style.display = 'none';
+    }
+    histEl.innerHTML = list.map(s => _fbCard(s, replyMap[s.id], false)).join('');
+    refreshFbBadge();
+  } catch (e) {
+    const msg = (e.message || '').includes('schema cache') || (e.message || '').includes('does not exist')
+      ? 'Chưa chạy SQL góp ý. Admin hãy chạy file supabase_session_feedback.sql trên Supabase.'
+      : ('Lỗi: ' + e.message);
+    histEl.innerHTML = `<div style="text-align:center;padding:2rem;color:#b91c1c;font-size:.85rem">${escHtml(msg)}</div>`;
+  }
+}
+
+function _fbCard(s, rec, compact) {
+  const done = !!rec;
+  const canOpen = s.is_open;
+  const btn = canOpen
+    ? `<button type="button" onclick="openFbForm(${s.id})" style="border:none;border-radius:10px;padding:.45rem .9rem;font-size:.8rem;font-weight:800;cursor:pointer;background:linear-gradient(135deg,#78350f,#b45309);color:#fff">${done ? 'Sửa góp ý' : 'Góp ý ngay'}</button>`
+    : (done
+      ? `<span style="font-size:.75rem;font-weight:700;color:#15803d;background:#dcfce7;padding:.25rem .65rem;border-radius:20px">Đã gửi</span>`
+      : `<span style="font-size:.75rem;font-weight:700;color:var(--muted);background:var(--bg);padding:.25rem .65rem;border-radius:20px">Đã đóng</span>`);
+  return `
+    <div class="fb-card ${canOpen && !done ? 'open' : ''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:.93rem;margin-bottom:.25rem">${escHtml(s.title)}</div>
+          <div style="font-size:.76rem;color:var(--muted);display:flex;gap:.55rem;flex-wrap:wrap">
+            <span>📅 ${escHtml(_fbDate(s.session_date))}</span>
+            <span>📚 ${escHtml(s.class_name)}</span>
+            ${s.is_open ? '<span style="color:#b45309;font-weight:700">● Đang mở</span>' : '<span>● Đã đóng</span>'}
+          </div>
+          ${done && !compact ? `<div style="margin-top:.45rem;font-size:.78rem;color:var(--text)">Tempo: ${escHtml(FB_PACE[rec.pace]||'—')} · Hiểu bài: ${escHtml(FB_UND[rec.understood]||'—')}</div>` : ''}
+        </div>
+        ${btn}
+      </div>
+    </div>`;
+}
+
+async function openFbForm(id) {
+  try {
+    const { list, replyMap } = await _fetchMyFeedback();
+    const s = list.find(x => x.id === id);
+    if (!s) return;
+    const rec = replyMap[id];
+    _fbFormId = id;
+    _fbCanEdit = !!s.is_open;
+    _fbPace = rec?.pace || '';
+    _fbUnderstood = rec?.understood || '';
+    document.getElementById('fbModalTitle').textContent = s.title;
+    document.getElementById('fbModalSub').textContent = `${_fbDate(s.session_date)} · ${s.class_name}`;
+    document.getElementById('fbModalPrompt').textContent = s.prompt || 'Buổi học hôm nay thế nào? Góp ý để thầy/cô điều chỉnh buổi sau. Không ảnh hưởng điểm số.';
+    document.getElementById('fbWantReview').value = rec?.want_review || '';
+    document.getElementById('fbComment').value = rec?.comment || '';
+    document.getElementById('fbModalError').style.display = 'none';
+    document.getElementById('fbSubmitBtn').style.display = _fbCanEdit ? '' : 'none';
+    document.getElementById('fbWantReview').disabled = !_fbCanEdit;
+    document.getElementById('fbComment').disabled = !_fbCanEdit;
+    _syncFbOpts();
+    document.getElementById('fbModal').style.display = '';
+  } catch (e) {
+    _showAttToast('Không mở được form: ' + e.message, false);
+  }
+}
+
+function closeFbModal() {
+  document.getElementById('fbModal').style.display = 'none';
+  _fbFormId = null;
+}
+
+function setFbPace(v) {
+  if (!_fbCanEdit) return;
+  _fbPace = v;
+  _syncFbOpts();
+}
+function setFbUnderstood(v) {
+  if (!_fbCanEdit) return;
+  _fbUnderstood = v;
+  _syncFbOpts();
+}
+function _syncFbOpts() {
+  document.querySelectorAll('[data-fbpace]').forEach(b => b.classList.toggle('on', b.dataset.fbpace === _fbPace));
+  document.querySelectorAll('[data-fbund]').forEach(b => b.classList.toggle('on', b.dataset.fbund === _fbUnderstood));
+}
+
+async function submitStudentFeedback() {
+  const err = document.getElementById('fbModalError');
+  const showErr = m => { err.textContent = m; err.style.display = ''; };
+  err.style.display = 'none';
+  if (!_fbFormId) return;
+  if (!_fbCanEdit) { showErr('Buổi này đã đóng góp ý.'); return; }
+  if (!_fbPace) { showErr('Hãy chọn tốc độ giảng.'); return; }
+  if (!_fbUnderstood) { showErr('Hãy chọn mức nắm bài.'); return; }
+  const comment = (document.getElementById('fbComment').value || '').trim();
+  if (comment.length < 8) { showErr('Góp ý cần ít nhất 8 ký tự — viết cụ thể để thầy/cô điều chỉnh được.'); return; }
+  const want = (document.getElementById('fbWantReview').value || '').trim();
+  const btn = document.getElementById('fbSubmitText');
+  btn.textContent = 'Đang gửi...';
+  try {
+    const { data: sess } = await db.from('session_feedback').select('is_open').eq('id', _fbFormId).single();
+    if (!sess?.is_open) { showErr('Buổi này đã đóng góp ý.'); btn.textContent = 'Gửi góp ý'; return; }
+    const payload = {
+      feedback_id: _fbFormId,
+      username: currentUser,
+      student_name: currentName,
+      class_name: myClass || (myClasses[0] || ''),
+      rating: null,
+      pace: _fbPace,
+      understood: _fbUnderstood,
+      want_review: want || null,
+      comment,
+      updated_at: new Date().toISOString()
+    };
+    const { error } = await db.from('session_feedback_replies').upsert(payload, { onConflict: 'feedback_id,username' });
+    if (error) throw error;
+    closeFbModal();
+    _showAttToast('Đã gửi góp ý — cảm ơn bạn!', true);
+    await loadStudentFeedback();
+    renderHomeFeedbackBanner();
+  } catch (e) {
+    showErr('Lỗi: ' + e.message);
+  }
+  btn.textContent = 'Gửi góp ý';
+}
+
+document.getElementById('fbModal')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('fbModal')) closeFbModal();
+});
+
+
+// ════════════════════════════════════════════════════════════════
+// BANNER NHẮC ĐIỂM DANH — hiện trên trang chủ học sinh
+// ════════════════════════════════════════════════════════════════
+async function renderHomeDDBanner() {
+  const box = document.getElementById('homeDDBanner');
+  if (!box) return;
+  box.style.display = 'none';
+  try {
+    if (!myClasses || !myClasses.length) return;
+    const today = new Date().toISOString().split('T')[0];
+    // Lấy buổi đang mở hôm nay của lớp học sinh
+    const { data: openSessions } = await db
+      .from('dd_sessions')
+      .select('id, title, start_time, end_time, meet_link, class_name')
+      .eq('status', 'open')
+      .eq('session_date', today)
+      .in('class_name', myClasses);
+
+    if (!openSessions || !openSessions.length) return;
+
+    // Kiểm tra học sinh đã điểm danh chưa
+    const ids = openSessions.map(s => s.id);
+    const { data: myRecs } = await db
+      .from('dd_records')
+      .select('session_id, status')
+      .eq('username', currentUser)
+      .in('session_id', ids);
+
+    const doneIds = new Set((myRecs || []).map(r => r.session_id));
+    const notDone = openSessions.filter(s => !doneIds.has(s.id));
+    if (!notDone.length) return;
+
+    // Hiện banner cho buổi đầu tiên chưa điểm danh
+    const first = notDone[0];
+    box.style.display = '';
+    box.innerHTML = `
+      <div onclick="localStorage.setItem('dh_user',sessionStorage.getItem('dh_user')||'');localStorage.setItem('dh_name',sessionStorage.getItem('dh_name')||'');localStorage.setItem('dh_role',sessionStorage.getItem('dh_role')||'');window.open('diemdanh-student.html','_blank')"
+           style="background:linear-gradient(135deg,rgba(16,185,129,.18),rgba(16,185,129,.08));border:1.5px solid rgba(16,185,129,.4);border-radius:14px;padding:1rem 1.25rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;transition:all .2s"
+           onmouseover="this.style.background='linear-gradient(135deg,rgba(16,185,129,.25),rgba(16,185,129,.12))'"
+           onmouseout="this.style.background='linear-gradient(135deg,rgba(16,185,129,.18),rgba(16,185,129,.08))'">
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <div style="width:40px;height:40px;border-radius:50%;background:rgba(16,185,129,.2);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;animation:pulse 1.5s ease-in-out infinite">✅</div>
+          <div>
+            <div style="font-weight:800;font-size:.92rem;color:#6ee7b7">
+              🔴 Buổi học đang chờ điểm danh!
+              ${notDone.length > 1 ? `<span style="font-size:.75rem;background:rgba(239,68,68,.2);color:#fca5a5;padding:.1rem .45rem;border-radius:999px;margin-left:.4rem">${notDone.length} buổi</span>` : ''}
+            </div>
+            <div style="font-size:.82rem;color:rgba(110,231,183,.75);margin-top:.2rem">${escHtml(first.title)} · ${first.start_time||''}${first.end_time ? ' – ' + first.end_time : ''}</div>
+          </div>
+        </div>
+        <span style="font-size:.82rem;font-weight:700;color:#6ee7b7;white-space:nowrap;display:flex;align-items:center;gap:.3rem">
+          Điểm danh ngay →
+        </span>
+      </div>`;
+  } catch (e) {
+    // Bảng chưa tồn tại hoặc lỗi khác → ẩn banner
+    const box2 = document.getElementById('homeDDBanner');
+    if (box2) box2.style.display = 'none';
+  }
+}
+
+// Realtime: cập nhật banner điểm danh khi admin mở/đóng buổi
+try {
+  db.channel('dd-sessions-watch')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dd_sessions' }, () => {
+      if (document.getElementById('pageHome')?.classList.contains('active')) {
+        renderHomeDDBanner();
+      }
+    })
+    .subscribe();
+} catch (e) { /* bảng chưa tồn tại thì bỏ qua */ }

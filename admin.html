@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="google-site-verification" content="sYwxmM0uBuqYK-IhlY67eC_hitCqZFuu1DtAPymm23I" />
-  <title>Quản Trị - DHDTCT LMS v1.4.9</title>
+  <title>Quản Trị - DHDTCT LMS v1.5.0</title>
   <link rel="icon" type="image/png" href="icons/icon-192.png"/>
   <link rel="apple-touch-icon" href="icons/icon-192.png"/>
   <link rel="stylesheet" href="style.css"/>
@@ -14,6 +14,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
   <meta name="apple-mobile-web-app-title" content="DHDTCT LMS"/>
   <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="config.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <!-- EmailJS để gửi email tự động -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -27,6 +28,119 @@
     /* Dropdown công cụ */
     #toolsDropdownMenu button:hover { background: var(--bg) !important; }
     #toolsDropdownBtn:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* ── Thư viện số (admin) ── */
+    .lib-admin-hero{
+      position:relative;overflow:hidden;border-radius:20px;padding:1.45rem 1.5rem 1.3rem;margin-bottom:1.15rem;color:#fff;
+      background:
+        radial-gradient(ellipse 50% 80% at 92% 10%, rgba(255,226,122,.28), transparent 55%),
+        linear-gradient(135deg,#0b1026 0%,#1a1440 42%,#312e81 100%);
+      border:1px solid rgba(245,215,110,.32);
+      box-shadow:0 14px 36px rgba(26,20,64,.18);
+    }
+    .lib-admin-hero h1{margin:0 0 .3rem;font-size:1.45rem;font-weight:800;letter-spacing:-.3px}
+    .lib-admin-hero p{margin:0;font-size:.86rem;line-height:1.65;color:rgba(255,255,255,.72);max-width:560px}
+    .lib-admin-hero a{
+      display:inline-flex;align-items:center;gap:.35rem;margin-top:.9rem;padding:.48rem .9rem;border-radius:999px;
+      background:linear-gradient(135deg,#fff8eb,#f5d76e);color:#1a1440;font-size:.78rem;font-weight:800;text-decoration:none
+    }
+    .lib-admin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1rem}
+    .lib-stat{
+      background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:.85rem 1rem;
+      box-shadow:var(--shadow)
+    }
+    .lib-stat b{display:block;font-size:1.35rem;font-weight:800;letter-spacing:-.4px;line-height:1.1}
+    .lib-stat span{font-size:.75rem;font-weight:700;color:var(--muted)}
+    .lib-admin-tabs{
+      display:flex;gap:.4rem;flex-wrap:wrap;padding:.35rem;background:var(--card);border:1.5px solid var(--border);
+      border-radius:14px;margin-bottom:1.15rem;width:fit-content;max-width:100%
+    }
+    .lib-admin-tab{
+      border:none;background:transparent;color:var(--muted);border-radius:10px;padding:.5rem .95rem;
+      font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit
+    }
+    .lib-admin-tab.active{
+      background:linear-gradient(135deg,#1a1440,#4338ca);color:#fff8eb;box-shadow:0 6px 16px rgba(67,56,202,.28)
+    }
+    .lib-sheet{
+      background:var(--card);border:1.5px solid var(--border);border-radius:20px;overflow:hidden;
+      box-shadow:0 10px 32px rgba(15,23,42,.07)
+    }
+    .lib-sheet-head{
+      padding:1.1rem 1.35rem 1rem;border-bottom:1px solid var(--border);
+      background:linear-gradient(180deg, rgba(245,215,110,.12), transparent)
+    }
+    .lib-sheet-head h3{margin:0 0 .2rem;font-size:1.12rem;font-weight:800}
+    .lib-sheet-head p{margin:0;font-size:.8rem;color:var(--muted);line-height:1.5}
+    .lib-sheet-body{padding:1.25rem 1.35rem 1.4rem}
+    .lib-form-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:1.25rem;align-items:start}
+    .lib-fields{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+    .lib-field{display:flex;flex-direction:column;gap:.32rem}
+    .lib-field.full{grid-column:1/-1}
+    .lib-field label{font-size:.75rem;font-weight:800;color:var(--muted);letter-spacing:.02em}
+    .lib-field input,
+    .lib-field select,
+    .lib-field textarea{
+      width:100%;padding:.7rem .85rem;border:1.5px solid var(--border);border-radius:12px;
+      background:var(--bg);color:var(--text);font-size:.9rem;outline:none;font-family:inherit;transition:border-color .15s,box-shadow .15s
+    }
+    .lib-field textarea{resize:vertical;min-height:88px}
+    .lib-field input:focus,
+    .lib-field select:focus,
+    .lib-field textarea:focus{
+      border-color:#e8a317;box-shadow:0 0 0 4px rgba(245,215,110,.28);background:var(--card)
+    }
+    .lib-ico-row,.lib-color-row{display:flex;flex-wrap:wrap;gap:.35rem}
+    .lib-ico-btn,.lib-color-btn{
+      width:36px;height:36px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);
+      cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.05rem
+    }
+    .lib-ico-btn.active,.lib-color-btn.active{
+      border-color:#e8a317;box-shadow:0 0 0 3px rgba(245,215,110,.35)
+    }
+    .lib-preview{
+      position:sticky;top:88px;background:
+        radial-gradient(ellipse 80% 50% at 100% 0%, rgba(245,215,110,.16), transparent 55%),
+        var(--bg);
+      border:1.5px dashed rgba(232,163,23,.45);border-radius:18px;padding:1rem
+    }
+    .lib-preview-kicker{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#b45309;margin-bottom:.7rem}
+    .lib-preview-card{
+      background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:1.05rem 1.1rem;box-shadow:var(--shadow)
+    }
+    .lib-preview-top{display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;margin-bottom:.6rem}
+    .lib-preview-ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem}
+    .lib-preview-src{font-size:.62rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#92400e;background:#fef3c7;border-radius:999px;padding:.2rem .5rem}
+    .lib-preview-card h4{margin:0 0 .35rem;font-size:.95rem;font-weight:800}
+    .lib-preview-card p{margin:0;font-size:.8rem;color:var(--muted);line-height:1.55}
+    .lib-gold-btn{
+      display:inline-flex;align-items:center;gap:.45rem;border:none;cursor:pointer;font-family:inherit;
+      background:linear-gradient(135deg,#1a1440,#4338ca);color:#fff8eb;border-radius:12px;
+      padding:.75rem 1.2rem;font-size:.9rem;font-weight:800;box-shadow:0 8px 20px rgba(67,56,202,.28)
+    }
+    .lib-card{
+      background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:1.1rem 1.2rem;margin-bottom:.75rem;
+      box-shadow:var(--shadow)
+    }
+    .lib-who-admin{
+      display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;
+      margin:.15rem 0 .7rem;padding:.5rem .7rem;border-radius:10px;
+      background:#eef2ff;border:1px solid #c7d2fe;font-size:.8rem;color:#3730a3;font-weight:600
+    }
+    .lib-who-admin b{font-weight:800;color:#1e1b4b}
+    .lib-who-admin .lib-who-kicker{
+      font-size:.68rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#4338ca
+    }
+    body.dark-mode .lib-who-admin{background:#1e1b4b;border-color:#4338ca;color:#c7d2fe}
+    body.dark-mode .lib-who-admin b{color:#e0e7ff}
+    .lib-empty{
+      text-align:center;padding:2.4rem 1rem;background:var(--card);border:1.5px dashed var(--border);border-radius:18px;color:var(--muted)
+    }
+    @media (max-width:860px){
+      .lib-admin-stats{grid-template-columns:1fr 1fr}
+      .lib-form-grid,.lib-fields{grid-template-columns:1fr}
+      .lib-preview{position:static}
+    }
   </style>
 </head>
 <body class="dashboard-page">
@@ -49,15 +163,18 @@
       <a href="#" class="slink" data-page="create-student" data-label="Thêm học viên"><span class="slink-icon">➕</span><span class="slink-label">Thêm học viên mới</span></a>
       <a href="#" class="slink" data-page="students" data-label="Học sinh"><span class="slink-icon">👨‍🎓</span><span class="slink-label">Danh sách học sinh</span></a>
       <a href="#" class="slink" data-page="classes" data-label="Lớp học"><span class="slink-icon">🏫</span><span class="slink-label">Lớp học</span></a>
-      <a href="members.html" class="slink" data-label="Quản lý lớp FB"><span class="slink-icon">👥</span><span class="slink-label">Quản lý lớp FB</span></a>
       <a href="#" class="slink" data-page="security" data-label="Cảnh báo"><span class="slink-icon">🚨</span><span class="slink-label">Nhật ký cảnh báo <span id="alertNavBadge" class="nav-badge" style="display:none"></span></span></a>
       <a href="#" class="slink" data-page="devices" data-label="Thiết bị"><span class="slink-icon">📱</span><span class="slink-label">Cảnh báo thiết bị</span></a>
       <a href="#" class="slink" data-page="access-stats" data-label="Thống kê"><span class="slink-icon">📈</span><span class="slink-label">Thống kê truy cập</span></a>
       <a href="#" class="slink" data-page="login-history" data-label="Đăng nhập"><span class="slink-icon">🕐</span><span class="slink-label">Lịch sử đăng nhập</span></a>
       <a href="#" class="slink" data-page="announcements" data-label="Thông báo"><span class="slink-icon">📢</span><span class="slink-label">Thông báo</span></a>
       <a href="homework.html" class="slink" data-label="Bài Tập"><span class="slink-icon">📝</span><span class="slink-label">Bài Tập</span></a>
-      <a href="#" class="slink" data-page="files" data-label="Lưu trữ"><span class="slink-icon">🗂️</span><span class="slink-label">Lưu trữ tài liệu</span></a>
-      <a href="#" class="slink" data-page="schedule" data-label="Lịch học"><span class="slink-icon">📅</span><span class="slink-label">Lịch học</span></a>
+      <a href="#" class="slink" data-page="library" data-label="Thư viện số"><span class="slink-icon">🏛️</span><span class="slink-label">Thư viện số <span id="libNavBadge" class="nav-badge" style="display:none"></span></span></a>
+      <a href="#" class="slink" data-page="groups" data-label="Nhóm trao đổi"><span class="slink-icon">💬</span><span class="slink-label">Nhóm trao đổi <span id="zgNavBadge" class="nav-badge" style="display:none"></span></span></a>
+      <a href="diemdanh-admin.html" class="slink" data-label="Điểm danh" onclick="localStorage.setItem('dh_user',sessionStorage.getItem('dh_user')||'');localStorage.setItem('dh_name',sessionStorage.getItem('dh_name')||'');localStorage.setItem('dh_role',sessionStorage.getItem('dh_role')||'')" target="_blank"><span class="slink-icon">✅</span><span class="slink-label">Điểm danh</span></a>
+
+
+      <a href="#" class="slink" data-page="feedback-admin" data-label="Góp ý"><span class="slink-icon">💡</span><span class="slink-label">Góp ý buổi học <span id="fbNavBadge" class="nav-badge" style="display:none"></span></span></a>
       <a href="#" class="slink" data-page="profile" data-label="Hồ sơ"><span class="slink-icon"></span><span class="slink-label">Hồ sơ</span></a>
       <a href="#" class="slink" data-page="guide" data-label="Hướng dẫn"><span class="slink-icon">📖</span><span class="slink-label">Hướng dẫn sử dụng</span></a>
     </nav>
@@ -69,7 +186,7 @@
     <a href="sysadmin.html" style="display:flex;align-items:center;gap:.6rem;margin:.3rem .75rem .5rem;padding:.45rem .85rem;border-radius:10px;border:1px solid rgba(99,102,241,.35);background:rgba(99,102,241,.12);color:rgba(255,255,255,.75);font-size:.78rem;font-weight:700;transition:all .18s;text-decoration:none" onmouseover="this.style.background='rgba(99,102,241,.25)';this.style.color='#fff'" onmouseout="this.style.background='rgba(99,102,241,.12)';this.style.color='rgba(255,255,255,.75)'">
       <span style="font-size:.9rem">⚙️</span><span class="slink-label">Quản trị hệ thống</span>
     </a>
-    <div class="sidebar-version" style="padding:.6rem 1.25rem;font-size:.7rem;color:rgba(255,255,255,.3);font-weight:600;letter-spacing:.3px">v1.4.9</div>
+    <div class="sidebar-version" style="padding:.6rem 1.25rem;font-size:.7rem;color:rgba(255,255,255,.3);font-weight:600;letter-spacing:.3px">v1.5.0</div>
     <div class="sidebar-mini-reopen">
       <button class="sidebar-mini-toggle" title="Mở rộng">▶</button>
     </div>
@@ -145,6 +262,8 @@
       </div>
       <!-- Thông báo lớp hết hạn / sắp hết hạn -->
       <div id="classExpiryNotices" style="margin-top:1rem"></div>
+      <div id="libPendingOverview" style="margin-top:1rem"></div>
+      <div id="zgPendingOverview" style="margin-top:1rem"></div>
 
       <!-- Nhắc nhở hết hạn -->
       <div id="expiryReminderPanel" class="overview-panel" style="margin-top:1rem">
@@ -662,6 +781,98 @@
       </div>
     </section>
 
+
+    <!-- PAGE: GÓP Ý BUỔI HỌC -->
+    <section class="page" id="pageFeedbackAdmin">
+      <div style="background:linear-gradient(135deg,#78350f,#b45309);border-radius:18px;padding:1.4rem 1.6rem;margin-bottom:1.5rem;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem">
+        <div>
+          <div style="font-size:1.25rem;font-weight:900;letter-spacing:-.3px;display:flex;align-items:center;gap:.5rem">
+            <span style="width:34px;height:34px;background:rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">💡</span>
+            Góp ý buổi học
+          </div>
+          <div style="font-size:.8rem;opacity:.75;margin-top:.3rem">Tạo form sau mỗi buổi — học viên gửi ý kiến, bạn xem tổng hợp để điều chỉnh buổi sau</div>
+        </div>
+        <button type="button" onclick="openFbAdminCreateModal()" style="display:inline-flex;align-items:center;gap:.45rem;background:#fff;color:#78350f;border:none;border-radius:11px;padding:.6rem 1.25rem;font-size:.86rem;font-weight:800;cursor:pointer">➕ Mở góp ý buổi mới</button>
+      </div>
+      <div class="att-stat-strip" style="grid-template-columns:repeat(3,1fr)">
+        <div class="att-stat-item"><div class="att-stat-icon" style="background:#fffbeb">📋</div><div><div class="att-stat-num" id="fbStatTotal" style="color:#b45309">0</div><div class="att-stat-lbl">Tổng buổi</div></div></div>
+        <div class="att-stat-item"><div class="att-stat-icon" style="background:#d1fae5">🟢</div><div><div class="att-stat-num" id="fbStatOpen" style="color:#16a34a">0</div><div class="att-stat-lbl">Đang mở</div></div></div>
+        <div class="att-stat-item"><div class="att-stat-icon" style="background:#eef2ff">✉️</div><div><div class="att-stat-num" id="fbStatReplies" style="color:var(--primary)">0</div><div class="att-stat-lbl">Lượt góp ý</div></div></div>
+      </div>
+      <div class="att-filter-bar">
+        <span style="font-size:.76rem;font-weight:700;color:var(--muted);white-space:nowrap">Lọc:</span>
+        <select id="fbAdminFilterClass"><option value="">Tất cả lớp</option></select>
+        <input type="date" id="fbAdminFilterDate"/>
+        <button class="btn-primary" style="padding:.45rem 1rem;font-size:.84rem" onclick="loadFbAdminSessions()">Áp dụng</button>
+        <button class="btn-outline" style="padding:.45rem 1rem;font-size:.84rem" onclick="document.getElementById('fbAdminFilterDate').value='';loadFbAdminSessions()">Xóa lọc</button>
+      </div>
+      <div id="fbAdminSessionList"><div style="text-align:center;padding:3rem;color:var(--muted)">⏳ Đang tải...</div></div>
+    </section>
+
+    <div id="fbAdminModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;overflow-y:auto;backdrop-filter:blur(6px);padding:1rem">
+      <div style="max-width:520px;margin:1.75rem auto;background:var(--card);border-radius:20px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.3)">
+        <div style="background:linear-gradient(135deg,#78350f,#b45309);padding:1.25rem 1.5rem;color:#fff;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-weight:900;font-size:.95rem" id="fbAdminModalTitle">Mở góp ý buổi học</span>
+          <button type="button" onclick="document.getElementById('fbAdminModal').style.display='none'" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer">✕</button>
+        </div>
+        <div style="padding:1.4rem;display:flex;flex-direction:column;gap:.85rem">
+          <div>
+            <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:.3rem">Tiêu đề <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="fbAdminTitle" placeholder="VD: Góp ý buổi 15/01 — Phương trình bậc 2" style="width:100%;padding:.7rem .85rem;border:1.5px solid var(--border);border-radius:10px;font-size:.88rem;background:var(--card);color:var(--text);box-sizing:border-box"/>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem">
+            <div>
+              <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:.3rem">Lớp <span style="color:var(--danger)">*</span></label>
+              <select id="fbAdminClass" style="width:100%;padding:.7rem .85rem;border:1.5px solid var(--border);border-radius:10px;font-size:.88rem;background:var(--card);color:var(--text)"><option value="">-- Chọn lớp --</option></select>
+            </div>
+            <div>
+              <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:.3rem">Ngày buổi học <span style="color:var(--danger)">*</span></label>
+              <input type="date" id="fbAdminDate" style="width:100%;padding:.7rem .85rem;border:1.5px solid var(--border);border-radius:10px;font-size:.88rem;background:var(--card);color:var(--text);box-sizing:border-box"/>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:.74rem;font-weight:700;color:var(--muted);display:block;margin-bottom:.3rem">Câu hỏi gửi học viên</label>
+            <textarea id="fbAdminPrompt" rows="3" placeholder="Buổi học hôm nay thế nào? Góp ý để thầy/cô điều chỉnh buổi sau." style="width:100%;padding:.7rem .85rem;border:1.5px solid var(--border);border-radius:10px;font-size:.88rem;background:var(--card);color:var(--text);resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+          </div>
+          <label style="display:flex;align-items:center;gap:.55rem;cursor:pointer;font-size:.85rem;font-weight:600;background:#fffbeb;padding:.6rem .85rem;border-radius:10px">
+            <input type="checkbox" id="fbAdminIsOpen" checked style="accent-color:#b45309;width:15px;height:15px"/>Mở ngay để học viên góp ý
+          </label>
+          <div id="fbAdminModalError" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:.55rem .85rem;font-size:.82rem;color:#b91c1c"></div>
+          <button type="button" onclick="saveFbAdminSession()" style="width:100%;padding:.8rem;font-size:.9rem;font-weight:800;background:linear-gradient(135deg,#78350f,#b45309);color:#fff;border:none;border-radius:12px;cursor:pointer">
+            <span id="fbAdminSaveText">Lưu form góp ý</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="fbDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9100;overflow-y:auto;backdrop-filter:blur(6px);padding:1rem">
+      <div style="max-width:760px;margin:1.5rem auto;background:var(--card);border-radius:20px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.3)">
+        <div style="background:linear-gradient(135deg,#78350f,#b45309);padding:1.25rem 1.5rem;color:#fff;display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem">
+          <div>
+            <div style="font-weight:900;font-size:.98rem" id="fbDetailTitle">Tổng hợp góp ý</div>
+            <div style="font-size:.75rem;opacity:.75;margin-top:.2rem" id="fbDetailSub"></div>
+          </div>
+          <div style="display:flex;gap:.45rem;flex-shrink:0">
+            <button type="button" onclick="exportFbCSV()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:.35rem .8rem;border-radius:8px;font-size:.76rem;font-weight:700;cursor:pointer">CSV</button>
+            <button type="button" onclick="document.getElementById('fbDetailModal').style.display='none'" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer">✕</button>
+          </div>
+        </div>
+        <div id="fbDetailStats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--border)"></div>
+        <div style="padding:1.15rem 1.35rem;max-height:62vh;overflow-y:auto">
+          <div id="fbDetailBars" style="margin-bottom:1.1rem"></div>
+          <div style="font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:.45rem;text-transform:uppercase">Góp ý chi tiết</div>
+          <div id="fbDetailList"></div>
+          <div style="font-size:.78rem;font-weight:800;color:var(--muted);margin:1.1rem 0 .45rem;text-transform:uppercase">Chưa gửi</div>
+          <div id="fbDetailMissing" style="font-size:.82rem;color:var(--muted)"></div>
+          <div style="margin-top:1.15rem">
+            <div style="font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase">Ghi chú điều chỉnh buổi sau</div>
+            <textarea id="fbAdminNote" rows="3" placeholder="VD: Buổi sau chậm lại phần xác suất, thêm 2 bài vận dụng..." style="width:100%;padding:.7rem .85rem;border:1.5px solid var(--border);border-radius:10px;font-size:.86rem;background:var(--bg);color:var(--text);resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+            <button type="button" class="btn-primary" style="margin-top:.55rem;padding:.45rem 1rem;font-size:.84rem" onclick="saveFbAdminNote()">Lưu ghi chú</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- PAGE: LỊCH HỌC V2 -->
     <section class="page" id="pageSchedule">
       <div class="page-header">
@@ -741,6 +952,70 @@
 
       <!-- Nội dung file manager -->
       <div id="fileManagerContent"></div>
+    </section>
+
+    <!-- PAGE: THƯ VIỆN SỐ -->
+    <section class="page" id="pageLibrary">
+      <div class="lib-admin-hero">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap">
+          <div>
+            <div style="display:inline-flex;align-items:center;gap:.4rem;background:rgba(245,215,110,.14);border:1px solid rgba(245,215,110,.35);border-radius:999px;padding:.28rem .75rem;font-size:.72rem;font-weight:700;color:#f5d76e;margin-bottom:.7rem">Quản lý học liệu</div>
+            <h1>Thư viện số</h1>
+            <p>Nhận đề xuất từ học sinh, kiểm tra nguồn rồi thêm vào thư viện. Học sinh thấy ngay trên trang của mình.</p>
+          </div>
+          <a href="library.html" target="_blank" rel="noopener">Xem trang học sinh ↗</a>
+        </div>
+      </div>
+      <div class="lib-admin-stats" id="libAdminStats"></div>
+      <div class="lib-admin-tabs" id="libAdminTabs">
+        <button type="button" class="lib-admin-tab active" data-libtab="pending">Chờ duyệt</button>
+        <button type="button" class="lib-admin-tab" data-libtab="approved">Đã thêm</button>
+        <button type="button" class="lib-admin-tab" data-libtab="rejected">Từ chối / gỡ</button>
+        <button type="button" class="lib-admin-tab" data-libtab="reports">Báo cáo <span id="libReportTabBadge" class="nav-badge" style="display:none;margin-left:.25rem"></span></button>
+        <button type="button" class="lib-admin-tab" data-libtab="manual">Thêm thủ công</button>
+      </div>
+      <div id="libAdminList"></div>
+      <div id="libAdminManual" style="display:none"></div>
+    </section>
+
+    <!-- PAGE: NHÓM TRAO ĐỔI ZALO -->
+    <section class="page" id="pageGroups">
+      <div class="lib-admin-hero">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap">
+          <div>
+            <div style="display:inline-flex;align-items:center;gap:.4rem;background:rgba(0,168,255,.16);border:1px solid rgba(106,196,255,.4);border-radius:999px;padding:.28rem .75rem;font-size:.72rem;font-weight:700;color:#7dd3fc;margin-bottom:.7rem">Zalo lớp học</div>
+            <h1>Nhóm trao đổi</h1>
+            <p>Tạo nhóm, dán link mời Zalo. Học sinh có thể đề xuất mở nhóm — bạn nhận ngay và bấm <b>Mở nhóm</b>.</p>
+          </div>
+          <a href="groups.html" target="_blank" rel="noopener">Xem trang học sinh ↗</a>
+        </div>
+      </div>
+      <div id="zgPendingList"></div>
+      <div class="lib-sheet" style="margin-bottom:1.15rem">
+        <div class="lib-sheet-head">
+          <h3 id="zgFormTitle">Tạo nhóm mới</h3>
+          <p>Trên Zalo: Quản lý nhóm → Liên kết tham gia / Mời bạn → copy link <b>zalo.me</b>.</p>
+        </div>
+        <div class="lib-sheet-body">
+          <div class="lib-fields">
+            <div class="lib-field full"><label>Tên nhóm</label><input id="zgName" placeholder="VD: Toán 12A — Nhóm trao đổi"/></div>
+            <div class="lib-field full"><label>Link Zalo</label><input id="zgUrl" placeholder="https://zalo.me/g/..."/></div>
+            <div class="lib-field"><label>Lớp</label><select id="zgClass"><option value="">Tất cả lớp</option></select></div>
+            <div class="lib-field"><label>Mô tả</label><input id="zgDesc" placeholder="Nhóm hỏi bài, thông báo lớp..."/></div>
+            <div class="lib-field full">
+              <label>Icon</label>
+              <input type="hidden" id="zgIcon" value="💬"/>
+              <div class="lib-ico-row" id="zgIconRow"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap;align-items:center">
+            <button type="button" class="lib-gold-btn" id="zgSaveBtn">Lưu nhóm</button>
+            <button type="button" class="btn-outline" id="zgResetBtn" style="display:none">Hủy sửa</button>
+            <span id="zgFormMsg" style="font-size:.82rem;font-weight:600"></span>
+          </div>
+        </div>
+      </div>
+      <div id="zgAdminList"></div>
     </section>
 
     <!-- PAGE: HƯỚNG DẪN SỬ DỤNG -->
@@ -1486,6 +1761,14 @@
         <!-- Bản viết tay links -->
         <label style="font-size:.83rem;margin-top:.5rem">✍️ Link bản viết tay <span class="muted">(mỗi dòng 1 link)</span></label>
         <textarea id="lInlineHwLinks" placeholder="https://drive.google.com/file/d/..." rows="3" style="resize:vertical;width:100%;padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:10px;font-size:.85rem;background:var(--bg);color:var(--text);outline:none;box-sizing:border-box"></textarea>
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem">
+          <label style="display:flex;align-items:center;gap:.45rem;cursor:pointer;font-size:.8rem;font-weight:600;padding:.45rem .7rem;border:1.5px solid var(--border);border-radius:9px;background:var(--bg)">
+            <input type="checkbox" id="lInlineVideoAllowDl" style="width:15px;height:15px;accent-color:var(--primary)"/> Cho phép tải video
+          </label>
+          <label style="display:flex;align-items:center;gap:.45rem;cursor:pointer;font-size:.8rem;font-weight:600;padding:.45rem .7rem;border:1.5px solid var(--border);border-radius:9px;background:var(--bg)">
+            <input type="checkbox" id="lInlineDocAllowDl" checked style="width:15px;height:15px;accent-color:var(--primary)"/> Cho phép tải tài liệu
+          </label>
+        </div>
       </div>
 
       <div id="lError" class="error-msg"></div>
@@ -1499,7 +1782,7 @@
   <!-- MODAL: Upload Video bài học -->
   <div class="modal-overlay" id="lessonVideoModal">
     <div class="modal">
-      <h2>Thêm video vào bài học</h2>
+      <h2 id="lessonVideoModalTitle">Thêm video vào bài học</h2>
       <!-- Tab chọn loại -->
       <div class="tab-row" style="margin-bottom:1rem">
         <button class="tab-btn active" id="tabVideoFile">📁 Upload file</button>
@@ -1509,7 +1792,7 @@
       <!-- Upload file -->
       <div id="videoFileSection">
         <div class="preview-wrap"><video id="lessonPreviewVideo" controls></video></div>
-        <label style="margin-top:.5rem">Chọn file video</label>
+        <label style="margin-top:.5rem">Chọn file video <span id="lvFileHint" class="muted"></span></label>
         <input type="file" id="lessonVideoFileInput" accept="video/*" style="margin-bottom:.5rem"/>
       </div>
       <!-- Dán link -->
@@ -1525,6 +1808,10 @@
       </div>
       <label>Tiêu đề video</label>
       <input type="text" id="lvTitleInput" placeholder="VD: Bài 1 — Phương trình bậc 2"/>
+      <label style="display:flex;align-items:center;gap:.55rem;margin-top:.85rem;cursor:pointer;user-select:none;padding:.6rem .85rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);font-size:.85rem;font-weight:600">
+        <input type="checkbox" id="lvAllowDownload" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer"/>
+        <span>Cho phép học viên <b>tải video xuống</b> <span style="color:var(--muted);font-weight:400">(tắt = chỉ xem trên web)</span></span>
+      </label>
       <div class="modal-actions">
         <button id="lvCancelBtn" class="btn-outline">Hủy</button>
         <button id="lvSaveBtn" class="btn-primary">Lưu</button>
@@ -1535,7 +1822,7 @@
   <!-- MODAL: Upload Tài liệu bài học -->
   <div class="modal-overlay" id="lessonDocModal">
     <div class="modal">
-      <h2>Thêm tài liệu vào bài học</h2>
+      <h2 id="lessonDocModalTitle">Thêm tài liệu vào bài học</h2>
       <div class="tab-row" style="margin-bottom:1rem">
         <button class="tab-btn active" id="tabDocFile">📁 Upload file</button>
         <button class="tab-btn" id="tabDocLink">🔗 Tài liệu</button>
@@ -1558,7 +1845,14 @@
       </div>
       <!-- Bản viết tay riêng (ẩn, giữ để tương thích) -->
       <div id="docHandwrittenSection" style="display:none"></div>
-      <input type="text" id="ldTitleInput" placeholder="Tên tài liệu..." style="display:none"/>
+      <div id="ldTitleWrap" style="display:none;margin-top:.65rem">
+        <label>Tên tài liệu</label>
+        <input type="text" id="ldTitleInput" placeholder="Tên tài liệu..."/>
+      </div>
+      <label style="display:flex;align-items:center;gap:.55rem;margin-top:.75rem;cursor:pointer;user-select:none;padding:.6rem .85rem;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);font-size:.85rem;font-weight:600">
+        <input type="checkbox" id="ldAllowDownload" checked style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer"/>
+        <span>Cho phép học viên <b>tải tài liệu xuống</b> <span style="color:var(--muted);font-weight:400">(tắt = chỉ xem trên web)</span></span>
+      </label>
       <div class="modal-actions">
         <button id="ldCancelBtn" class="btn-outline">Hủy</button>
         <button id="ldSaveBtn" class="btn-primary">Tải lên</button>
@@ -1674,7 +1968,7 @@
       <h2 id="groupModalTitle">Tạo nhóm</h2>
       <label>Tên nhóm</label>
       <input type="text" id="groupNameInput" placeholder="VD: Chương 1, Đại số, Ôn tập..."/>
-      <label>Chia sẻ cho lớp <span class="muted">(để trống = tất cả lớp)</span></label>
+      <label>Chia sẻ cho lớp <span class="muted">(bắt buộc chọn lớp — mới hiện bên học sinh)</span></label>
       <!-- Dropdown chọn lớp -->
       <div style="position:relative">
         <select id="groupClassSelect" style="width:100%"><option value="">-- Chọn lớp để thêm --</option></select>
@@ -1743,7 +2037,5 @@
     <span class="cp-dot"></span>
     <span>Thiết kế &amp; Phát triển bởi <b>Tr.Cường08</b> &amp; <b>Quốc Toàn</b></span>
     <span class="cp-dot"></span>
-    <span><b>v1.4.9</b></span>
+    <span><b>v1.5.0</b></span>
   </div>
-
-</body>
